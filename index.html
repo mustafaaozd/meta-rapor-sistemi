@@ -1,0 +1,182 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1" />
+<title>Panel — Meta Raporu</title>
+<link rel="icon" href="data:,">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:wght@500;600;700&family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="assets/css/style.css" />
+<link rel="stylesheet" href="assets/css/admin.css" />
+</head>
+<body>
+
+<!-- ============== GİRİŞ EKRANI ============== -->
+<div id="loginScreen" class="login-screen">
+  <div class="login-card fade-in">
+    <span class="eyebrow">Meta Raporu</span>
+    <h1>Yönetim Girişi</h1>
+    <form id="loginForm">
+      <div class="field">
+        <label for="loginEmail">E-posta</label>
+        <input type="email" id="loginEmail" autocomplete="username" required />
+      </div>
+      <div class="field">
+        <label for="loginPassword">Şifre</label>
+        <input type="password" id="loginPassword" autocomplete="current-password" required />
+      </div>
+      <p class="login-error" id="loginError"></p>
+      <button type="submit" class="btn btn--primary btn--block" id="loginBtn">Giriş Yap</button>
+    </form>
+  </div>
+</div>
+
+<!-- ============== ADMIN PANELİ ============== -->
+<div id="adminScreen" class="admin-shell" style="display:none;">
+
+  <div class="admin-topbar">
+    <div class="admin-topbar__brandmark"><span class="dot"></span> Meta Raporu · Panel</div>
+    <button class="btn btn--ghost btn--sm" id="logoutBtn">Çıkış Yap</button>
+  </div>
+
+  <!-- SOL PANEL: marka listesi -->
+  <aside class="panel">
+    <h3>Markalar</h3>
+    <div class="brand-list" id="brandList"></div>
+
+    <form id="addBrandForm" style="display:flex; gap:8px; margin-bottom:4px;">
+      <input type="text" id="newBrandName" placeholder="Yeni marka adı" required
+        style="flex:1; background:var(--surface-2); border:1px solid var(--border); color:var(--text); border-radius:var(--radius-sm); padding:9px 11px; font-size:13px; font-family:var(--font-body);" />
+      <button type="submit" class="btn btn--sm btn--primary">Ekle</button>
+    </form>
+
+    <div class="share-box" id="shareBox" style="display:none;">
+      <h3 style="margin-bottom:8px;">Müşteri Linki</h3>
+      <div class="share-box__link">
+        <span id="shareLinkText">—</span>
+        <button class="btn btn--sm btn--ghost" id="copyLinkBtn" type="button">Kopyala</button>
+      </div>
+    </div>
+  </aside>
+
+  <!-- SAĞ İÇERİK -->
+  <main class="admin-main" id="mainContent" style="display:none;">
+
+    <!-- Rapor tarihi + metrik formu -->
+    <section class="card fade-in">
+      <div class="card__head">
+        <h2 id="activeBrandTitle">Rapor Bilgileri</h2>
+        <input type="date" id="reportDate" style="background:var(--surface-2); border:1px solid var(--border); color:var(--text); border-radius:var(--radius-sm); padding:9px 12px; font-family:var(--font-mono); font-size:13px;" />
+      </div>
+
+      <div class="form-grid">
+        <div class="field">
+          <label>Reklam Harcama Tutarı (₺)</label>
+          <input type="number" step="0.01" min="0" id="fAdSpend" placeholder="0" />
+        </div>
+        <div class="field">
+          <label>Ciro (₺)</label>
+          <input type="number" step="0.01" min="0" id="fRevenue" placeholder="0" />
+        </div>
+        <div class="field">
+          <label>Sepete Ekleme</label>
+          <input type="number" step="1" min="0" id="fAddToCart" placeholder="0" />
+        </div>
+        <div class="field">
+          <label>Ödeme Adımına Geçme</label>
+          <input type="number" step="1" min="0" id="fCheckout" placeholder="0" />
+        </div>
+        <div class="field">
+          <label>Toplam Sipariş Adedi</label>
+          <input type="number" step="1" min="0" id="fOrders" placeholder="0" />
+        </div>
+      </div>
+
+      <div class="roas-preview">
+        <span class="label">Otomatik hesaplanan ROAS (Ciro / Reklam Harcaması)</span>
+        <span class="value" id="roasPreview">—</span>
+      </div>
+
+      <div style="margin-top:18px; display:flex; gap:10px; justify-content:flex-end;">
+        <span class="eyebrow" id="saveStatus" style="align-self:center; text-transform:none; letter-spacing:0;"></span>
+        <button class="btn btn--primary" id="saveReportBtn">Raporu Kaydet</button>
+      </div>
+    </section>
+
+    <!-- Video / Kanca yönetimi -->
+    <section class="card fade-in">
+      <div class="card__head">
+        <h2>En İyi Kancalar</h2>
+        <span class="eyebrow">3–4 saniyelik kanca klipleri</span>
+      </div>
+      <div class="admin-hook-list" id="adminHookList">
+        <button class="add-hook-tile" id="addHookTile" type="button">
+          <span class="plus">+</span>
+          Video Ekle
+        </button>
+      </div>
+    </section>
+
+  </main>
+
+  <div class="state-screen" id="noBrandState" style="grid-column: 2; display:flex;">
+    <p>Başlamak için soldan bir marka seç ya da yeni marka ekle.</p>
+  </div>
+
+  <input type="file" id="videoFileInput" accept="video/*" style="display:none;" />
+</div>
+
+<!-- ============== VİDEO KESME MODALI ============== -->
+<div class="modal-overlay" id="trimModal" style="display:none;">
+  <div class="modal">
+    <div class="modal__head">
+      <h3>Kancayı Kes</h3>
+      <button class="modal__close" id="closeTrimModal" type="button">&times;</button>
+    </div>
+
+    <div class="trim-video-wrap">
+      <video id="trimVideoPreview" muted playsinline></video>
+    </div>
+
+    <div class="trim-range-row">
+      <label><span>Başlangıç</span><span id="startLabel" class="num">0.0s</span></label>
+      <input type="range" id="startRange" min="0" max="10" step="0.1" value="0" />
+    </div>
+    <div class="trim-range-row">
+      <label><span>Bitiş</span><span id="endLabel" class="num">0.0s</span></label>
+      <input type="range" id="endRange" min="0" max="10" step="0.1" value="4" />
+    </div>
+    <p class="trim-duration-note" id="trimDurationNote">Klip süresi: 0.0 sn</p>
+
+    <div style="display:flex; gap:10px; margin-bottom:14px;">
+      <button class="btn btn--ghost btn--block btn--sm" id="previewClipBtn" type="button">▶ Segmenti Önizle</button>
+    </div>
+
+    <div class="field field--text">
+      <label>Video Başlığı</label>
+      <input type="text" id="hookTitleInput" placeholder="örn. Ürün açılış kancası" />
+    </div>
+    <div class="field">
+      <label>Hook Rate (%)</label>
+      <input type="number" step="0.1" min="0" max="100" id="hookRateInput" placeholder="örn. 42" />
+    </div>
+
+    <p class="trim-duration-note" id="trimStatusNote" style="min-height:16px;"></p>
+
+    <div class="modal-actions">
+      <button class="btn btn--ghost" id="cancelTrimBtn" type="button">Vazgeç</button>
+      <button class="btn btn--primary" id="confirmTrimBtn" type="button">Kes ve Yükle</button>
+    </div>
+    <div class="upload-progress" id="uploadProgressWrap" style="display:none;"><span id="uploadProgressBar"></span></div>
+  </div>
+</div>
+
+<div id="toastRoot"></div>
+
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="assets/js/supabaseClient.js"></script>
+<script src="assets/js/videoTrim.js"></script>
+<script src="assets/js/admin.js"></script>
+</body>
+</html>

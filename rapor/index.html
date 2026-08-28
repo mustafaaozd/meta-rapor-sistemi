@@ -1,0 +1,85 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1" />
+<title>Aylık Performans Raporu</title>
+<link rel="icon" href="data:,">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:wght@500;600;700&family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="../assets/css/style.css" />
+</head>
+<body>
+
+<div id="loadingState" class="state-screen">
+  <div class="spinner"></div>
+  <p>Rapor hazırlanıyor…</p>
+</div>
+
+<div id="errorState" class="state-screen" style="display:none;">
+  <p>Bu bağlantı geçersiz görünüyor. Lütfen ajansınızla iletişime geçin.</p>
+</div>
+
+<div id="reportRoot" class="shell" style="display:none;">
+
+  <header class="report-header fade-in">
+    <div class="report-header__brand">
+      <div class="report-header__logo" id="brandLogo"><span>LOGO</span></div>
+      <div class="report-header__title">
+        <span class="eyebrow">Aylık Performans Raporu</span>
+        <h1 id="brandName">—</h1>
+      </div>
+    </div>
+    <div class="report-header__meta">
+      <span class="eyebrow">Rapor Tarihi</span>
+      <span class="date" id="reportDate">—</span>
+    </div>
+  </header>
+
+  <section class="metrics-grid fade-in">
+    <div class="metric-card">
+      <div class="metric-card__label">Reklam Harcama Tutarı</div>
+      <div class="metric-card__value"><span class="unit">₺</span><span id="mAdSpend">0</span></div>
+    </div>
+    <div class="metric-card">
+      <div class="metric-card__label">Ciro</div>
+      <div class="metric-card__value"><span class="unit">₺</span><span id="mRevenue">0</span></div>
+    </div>
+    <div class="metric-card metric-card--hero">
+      <div class="metric-card__label">Reklam Harcamasının Getirisi</div>
+      <div class="metric-card__value" id="mRoas">—</div>
+      <div class="metric-card__sub" id="mRoasSub"></div>
+    </div>
+    <div class="metric-card">
+      <div class="metric-card__label">Sepete Ekleme</div>
+      <div class="metric-card__value"><span id="mAddToCart">0</span></div>
+    </div>
+    <div class="metric-card">
+      <div class="metric-card__label">Ödeme Adımına Geçme</div>
+      <div class="metric-card__value"><span id="mCheckout">0</span></div>
+    </div>
+    <div class="metric-card">
+      <div class="metric-card__label">Toplam Sipariş Adedi</div>
+      <div class="metric-card__value"><span id="mOrders">0</span></div>
+    </div>
+  </section>
+
+  <div class="section-title fade-in">
+    <div>
+      <span class="eyebrow">İzleyiciyi ilk 3 saniyede yakalayan kesitler</span>
+      <h2>En İyi Kancalar</h2>
+    </div>
+  </div>
+
+  <section class="hooks-grid fade-in" id="hooksGrid">
+    <div class="hooks-empty">Bu aya ait kanca videosu henüz eklenmedi.</div>
+  </section>
+
+  <p class="footer-note">Bu rapor size özel, gizli bir bağlantı üzerinden paylaşılmıştır.</p>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="../assets/js/supabaseClient.js"></script>
+<script src="../assets/js/report.js"></script>
+</body>
+</html>
