@@ -6,7 +6,7 @@
 <title>Panel — Meta Raporu</title>
 <link rel="icon" href="data:,">
 <link rel="preconnect" href="https://fonts.googleapis.com">
-<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600;700&family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="assets/css/style.css" />
 <link rel="stylesheet" href="assets/css/admin.css" />
 </head>
@@ -47,7 +47,7 @@
 
     <form id="addBrandForm" style="display:flex; gap:8px; margin-bottom:4px;">
       <input type="text" id="newBrandName" placeholder="Yeni marka adı" required
-        style="flex:1; background:var(--surface-2); border:1px solid var(--border); color:var(--text); border-radius:var(--radius-sm); padding:9px 11px; font-size:13px; font-family:var(--font-body);" />
+        style="flex:1; background:#fff; border:1px solid var(--glass-border); color:var(--text); border-radius:var(--radius-sm); padding:9px 11px; font-size:13px; font-family:var(--font-body);" />
       <button type="submit" class="btn btn--sm btn--primary">Ekle</button>
     </form>
 
@@ -66,8 +66,15 @@
     <!-- Rapor tarihi + metrik formu -->
     <section class="card fade-in">
       <div class="card__head">
-        <h2 id="activeBrandTitle">Rapor Bilgileri</h2>
-        <input type="date" id="reportDate" style="background:var(--surface-2); border:1px solid var(--border); color:var(--text); border-radius:var(--radius-sm); padding:9px 12px; font-family:var(--font-mono); font-size:13px;" />
+        <div style="display:flex; align-items:center; gap:14px;">
+          <div class="brand-logo-upload" id="brandLogoUpload" title="Logo yüklemek için tıkla">
+            <span id="brandLogoPreviewText">LOGO</span>
+            <img id="brandLogoPreviewImg" style="display:none;" alt="" />
+          </div>
+          <h2 id="activeBrandTitle">Rapor Bilgileri</h2>
+        </div>
+        <input type="file" id="brandLogoInput" accept="image/*" style="display:none;" />
+        <input type="date" id="reportDate" style="background:var(--glass); border:1px solid var(--glass-border); color:var(--text); border-radius:var(--radius-sm); padding:9px 12px; font-family:var(--font-mono); font-size:13px;" />
       </div>
 
       <div class="form-grid">
@@ -108,7 +115,6 @@
     <section class="card fade-in">
       <div class="card__head">
         <h2>En İyi Kancalar</h2>
-        <span class="eyebrow">3–4 saniyelik kanca klipleri</span>
       </div>
       <div class="admin-hook-list" id="adminHookList">
         <button class="add-hook-tile" id="addHookTile" type="button">
@@ -136,18 +142,26 @@
     </div>
 
     <div class="trim-video-wrap">
-      <video id="trimVideoPreview" muted playsinline></video>
+      <video id="trimVideoPreview" controls playsinline></video>
     </div>
 
-    <div class="trim-range-row">
-      <label><span>Başlangıç</span><span id="startLabel" class="num">0.0s</span></label>
-      <input type="range" id="startRange" min="0" max="10" step="0.1" value="0" />
+    <p class="trim-hint">Videoyu oynat, tam istediğin karede durdur, sonra aşağıdaki butonla o anı işaretle.</p>
+
+    <div class="timeline-track" id="timelineTrack">
+      <div class="timeline-track__range" id="timelineRange"></div>
+      <div class="timeline-track__playhead" id="timelinePlayhead"></div>
     </div>
-    <div class="trim-range-row">
-      <label><span>Bitiş</span><span id="endLabel" class="num">0.0s</span></label>
-      <input type="range" id="endRange" min="0" max="10" step="0.1" value="4" />
+    <div class="timeline-current" id="currentLabel">Şu an: 0.0s</div>
+
+    <div class="trim-mark-actions">
+      <button class="btn btn--ghost btn--sm" id="markStartBtn" type="button">⏮ Başlangıcı Buraya Al</button>
+      <button class="btn btn--ghost btn--sm" id="markEndBtn" type="button">⏭ Bitişi Buraya Al</button>
     </div>
-    <p class="trim-duration-note" id="trimDurationNote">Klip süresi: 0.0 sn</p>
+    <div class="trim-range-labels">
+      <span id="startLabel" class="num">Başlangıç: 0.0s</span>
+      <span id="endLabel" class="num">Bitiş: 4.0s</span>
+    </div>
+    <p class="trim-duration-note" id="trimDurationNote">Klip süresi: 4.0 sn</p>
 
     <div style="display:flex; gap:10px; margin-bottom:14px;">
       <button class="btn btn--ghost btn--block btn--sm" id="previewClipBtn" type="button">▶ Segmenti Önizle</button>

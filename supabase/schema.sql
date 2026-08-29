@@ -36,7 +36,7 @@ create table if not exists videos (
   clip_start numeric not null default 0,
   clip_end numeric not null default 0,
   original_duration numeric not null default 0,
-  sort_order integer not null default 0,
+  sort_order bigint not null default 0,
   created_at timestamptz not null default now()
 );
 

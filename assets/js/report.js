@@ -86,7 +86,6 @@ function render(brand, report, videos) {
   document.getElementById("mAdSpend").textContent = formatCurrency(adSpend);
   document.getElementById("mRevenue").textContent = formatCurrency(revenue);
   document.getElementById("mRoas").textContent = roas === null ? "—" : `x${roas.toFixed(2)}`;
-  document.getElementById("mRoasSub").textContent = "Ciro ÷ Reklam Harcaması";
   document.getElementById("mAddToCart").textContent = report ? report.add_to_cart : 0;
   document.getElementById("mCheckout").textContent = report ? report.checkout_started : 0;
   document.getElementById("mOrders").textContent = report ? report.total_orders : 0;

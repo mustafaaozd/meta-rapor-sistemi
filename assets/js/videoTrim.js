@@ -1,34 +1,36 @@
 // ============================================================================
-// VİDEO KESME MODÜLÜ
-// Kullanıcı bir video dosyası seçtiğinde bu modal açılır, başlangıç/bitiş
-// aralığı seçilir ve tarayıcı içinde (MediaRecorder ile) o segment yeni bir
-// video dosyası olarak "kesilip" admin.js'e teslim edilir.
-//
-// Not: video.captureStream() + MediaRecorder Chrome/Edge/Firefox masaüstünde
-// güvenilir çalışır. Safari'de kısıtlı olabilir — panel kullanımını Chrome
-// veya Edge ile yapman önerilir.
+// VİDEO KESME MODÜLÜ (CapCut mantığı)
+// Video native kontrollerle oynatılır/durdurulur, kullanıcı istediği saniyede
+// "Başlangıcı Buraya Al" / "Bitişi Buraya Al" butonlarına basarak kanca
+// aralığını işaretler. Bir zaman çizelgesi (timeline) canlı oynatma
+// konumunu ve seçili aralığı gösterir.
 // ============================================================================
 
 const VideoTrim = (() => {
   let currentFile = null;
   let objectUrl = null;
   let onCompleteCallback = null;
-  let recordedBlob = null;
   let originalDuration = 0;
+  let clipStart = 0;
+  let clipEnd = 0;
 
   const el = {
     modal: () => document.getElementById("trimModal"),
     video: () => document.getElementById("trimVideoPreview"),
-    startRange: () => document.getElementById("startRange"),
-    endRange: () => document.getElementById("endRange"),
+    track: () => document.getElementById("timelineTrack"),
+    range: () => document.getElementById("timelineRange"),
+    playhead: () => document.getElementById("timelinePlayhead"),
     startLabel: () => document.getElementById("startLabel"),
     endLabel: () => document.getElementById("endLabel"),
+    currentLabel: () => document.getElementById("currentLabel"),
     durationNote: () => document.getElementById("trimDurationNote"),
     statusNote: () => document.getElementById("trimStatusNote"),
     titleInput: () => document.getElementById("hookTitleInput"),
     rateInput: () => document.getElementById("hookRateInput"),
     confirmBtn: () => document.getElementById("confirmTrimBtn"),
     previewBtn: () => document.getElementById("previewClipBtn"),
+    markStartBtn: () => document.getElementById("markStartBtn"),
+    markEndBtn: () => document.getElementById("markEndBtn"),
     progressWrap: () => document.getElementById("uploadProgressWrap"),
     progressBar: () => document.getElementById("uploadProgressBar"),
   };
@@ -40,13 +42,13 @@ const VideoTrim = (() => {
   function open(file, onComplete) {
     currentFile = file;
     onCompleteCallback = onComplete;
-    recordedBlob = null;
 
     if (objectUrl) URL.revokeObjectURL(objectUrl);
     objectUrl = URL.createObjectURL(file);
 
     const video = el.video();
     video.src = objectUrl;
+    video.muted = false;
 
     el.titleInput().value = "";
     el.rateInput().value = "";
@@ -59,12 +61,9 @@ const VideoTrim = (() => {
 
     video.onloadedmetadata = () => {
       originalDuration = video.duration || 10;
-      const defaultEnd = Math.min(4, originalDuration);
-      el.startRange().max = originalDuration.toFixed(1);
-      el.endRange().max = originalDuration.toFixed(1);
-      el.startRange().value = 0;
-      el.endRange().value = defaultEnd.toFixed(1);
-      updateLabels();
+      clipStart = 0;
+      clipEnd = Math.min(4, originalDuration);
+      updateVisuals();
     };
 
     el.modal().style.display = "flex";
@@ -78,33 +77,60 @@ const VideoTrim = (() => {
     if (objectUrl) URL.revokeObjectURL(objectUrl);
     objectUrl = null;
     currentFile = null;
-    recordedBlob = null;
   }
 
-  function updateLabels() {
-    let start = parseFloat(el.startRange().value);
-    let end = parseFloat(el.endRange().value);
-    if (end <= start) {
-      end = Math.min(originalDuration, start + 0.5);
-      el.endRange().value = end.toFixed(1);
-    }
-    el.startLabel().textContent = fmt(start);
-    el.endLabel().textContent = fmt(end);
-    const dur = end - start;
+  function updateVisuals() {
+    if (clipEnd <= clipStart) clipEnd = Math.min(originalDuration, clipStart + 0.3);
+
+    el.startLabel().textContent = `Başlangıç: ${fmt(clipStart)}`;
+    el.endLabel().textContent = `Bitiş: ${fmt(clipEnd)}`;
+
+    const startPct = originalDuration > 0 ? (clipStart / originalDuration) * 100 : 0;
+    const widthPct = originalDuration > 0 ? ((clipEnd - clipStart) / originalDuration) * 100 : 0;
+    el.range().style.left = `${startPct}%`;
+    el.range().style.width = `${Math.max(widthPct, 0.5)}%`;
+
+    const dur = clipEnd - clipStart;
     const note = el.durationNote();
     note.textContent = `Klip süresi: ${dur.toFixed(1)} sn`;
-    note.classList.toggle("warn", dur > 8);
+    note.classList.toggle("warn", dur > 8 || dur <= 0);
+  }
+
+  function updatePlayhead() {
+    const video = el.video();
+    if (!originalDuration) return;
+    const pct = Math.min(100, (video.currentTime / originalDuration) * 100);
+    el.playhead().style.left = `${pct}%`;
+    el.currentLabel().textContent = `Şu an: ${fmt(video.currentTime)}`;
+  }
+
+  function seekFromTrackClick(e) {
+    const track = el.track();
+    const rect = track.getBoundingClientRect();
+    const clientX = e.touches ? e.touches[0].clientX : e.clientX;
+    const pct = Math.min(1, Math.max(0, (clientX - rect.left) / rect.width));
+    el.video().currentTime = pct * originalDuration;
+  }
+
+  function markStart() {
+    clipStart = el.video().currentTime;
+    if (clipStart >= clipEnd) clipEnd = Math.min(originalDuration, clipStart + 1);
+    updateVisuals();
+  }
+
+  function markEnd() {
+    clipEnd = el.video().currentTime;
+    if (clipEnd <= clipStart) clipStart = Math.max(0, clipEnd - 1);
+    updateVisuals();
   }
 
   function previewSegment() {
     const video = el.video();
-    const start = parseFloat(el.startRange().value);
-    const end = parseFloat(el.endRange().value);
-    video.currentTime = start;
+    video.currentTime = clipStart;
     video.muted = false;
     video.play();
     const onTick = () => {
-      if (video.currentTime >= end) {
+      if (video.currentTime >= clipEnd) {
         video.pause();
         video.removeEventListener("timeupdate", onTick);
       }
@@ -128,8 +154,6 @@ const VideoTrim = (() => {
   function trimToBlob() {
     return new Promise((resolve, reject) => {
       const video = el.video();
-      const start = parseFloat(el.startRange().value);
-      const end = parseFloat(el.endRange().value);
 
       if (!video.captureStream && !video.mozCaptureStream) {
         reject(new Error("Bu tarayıcı video kesmeyi desteklemiyor. Lütfen Chrome veya Edge kullan."));
@@ -148,14 +172,12 @@ const VideoTrim = (() => {
       recorder.onstop = () => {
         const blob = new Blob(chunks, { type: mimeType || "video/webm" });
         video.pause();
-        video.muted = true;
         resolve(blob);
       };
 
       recorder.onerror = (e) => reject(e.error || new Error("Kayıt hatası"));
 
-      video.currentTime = start;
-      video.muted = true;
+      video.currentTime = clipStart;
 
       const onSeeked = () => {
         video.removeEventListener("seeked", onSeeked);
@@ -163,7 +185,7 @@ const VideoTrim = (() => {
         video.play();
 
         const onTick = () => {
-          if (video.currentTime >= end) {
+          if (video.currentTime >= clipEnd) {
             video.removeEventListener("timeupdate", onTick);
             recorder.stop();
           }
@@ -185,6 +207,11 @@ const VideoTrim = (() => {
       statusNote.classList.add("warn");
       return;
     }
+    if (clipEnd - clipStart <= 0) {
+      statusNote.textContent = "Geçerli bir başlangıç/bitiş aralığı seç.";
+      statusNote.classList.add("warn");
+      return;
+    }
 
     confirmBtn.disabled = true;
     confirmBtn.textContent = "Kesiliyor…";
@@ -195,15 +222,12 @@ const VideoTrim = (() => {
       const blob = await trimToBlob();
       statusNote.textContent = "Yükleniyor…";
 
-      const start = parseFloat(el.startRange().value);
-      const end = parseFloat(el.endRange().value);
-
       await onCompleteCallback({
         blob,
         title,
         hookRate: rate ? parseFloat(rate) : null,
-        clipStart: start,
-        clipEnd: end,
+        clipStart,
+        clipEnd,
         originalDuration,
         onProgress: (pct) => {
           el.progressWrap().style.display = "block";
@@ -222,8 +246,10 @@ const VideoTrim = (() => {
   }
 
   function init() {
-    el.startRange().addEventListener("input", updateLabels);
-    el.endRange().addEventListener("input", updateLabels);
+    el.video().addEventListener("timeupdate", updatePlayhead);
+    el.track().addEventListener("click", seekFromTrackClick);
+    el.markStartBtn().addEventListener("click", markStart);
+    el.markEndBtn().addEventListener("click", markEnd);
     el.previewBtn().addEventListener("click", previewSegment);
     el.confirmBtn().addEventListener("click", confirm);
     document.getElementById("cancelTrimBtn").addEventListener("click", close);

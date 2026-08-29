@@ -204,6 +204,7 @@ async function selectBrand(id) {
   document.getElementById("mainContent").style.display = "flex";
   document.getElementById("noBrandState").style.display = "none";
   document.getElementById("activeBrandTitle").textContent = currentBrand.name;
+  updateLogoPreview();
 
   const shareBox = document.getElementById("shareBox");
   shareBox.style.display = "block";
@@ -216,6 +217,65 @@ async function selectBrand(id) {
 
   await loadOrCreateReport();
 }
+
+// ---------------------------------------------------------------------------
+// MARKA LOGOSU
+// ---------------------------------------------------------------------------
+
+function updateLogoPreview() {
+  const img = document.getElementById("brandLogoPreviewImg");
+  const text = document.getElementById("brandLogoPreviewText");
+  if (currentBrand && currentBrand.logo_url) {
+    img.src = currentBrand.logo_url;
+    img.style.display = "block";
+    text.style.display = "none";
+  } else {
+    img.style.display = "none";
+    text.style.display = "block";
+  }
+}
+
+document.getElementById("brandLogoUpload").addEventListener("click", () => {
+  if (!currentBrand) return;
+  document.getElementById("brandLogoInput").click();
+});
+
+document.getElementById("brandLogoInput").addEventListener("change", async (e) => {
+  const file = e.target.files[0];
+  e.target.value = "";
+  if (!file || !currentBrand) return;
+
+  const ext = file.name.split(".").pop();
+  const path = `${currentBrand.id}/logo-${Date.now()}.${ext}`;
+
+  const { error: uploadError } = await supabaseClient.storage
+    .from(LOGO_BUCKET)
+    .upload(path, file, { contentType: file.type, upsert: false });
+
+  if (uploadError) {
+    showToast("Logo yüklenemedi.", true);
+    return;
+  }
+
+  const { data: publicUrlData } = supabaseClient.storage.from(LOGO_BUCKET).getPublicUrl(path);
+
+  const { error: updateError } = await supabaseClient
+    .from("brands")
+    .update({ logo_url: publicUrlData.publicUrl })
+    .eq("id", currentBrand.id);
+
+  if (updateError) {
+    showToast("Logo kaydedilemedi.", true);
+    return;
+  }
+
+  currentBrand.logo_url = publicUrlData.publicUrl;
+  const idx = brands.findIndex((b) => b.id === currentBrand.id);
+  if (idx > -1) brands[idx].logo_url = publicUrlData.publicUrl;
+
+  updateLogoPreview();
+  showToast("Logo güncellendi.");
+});
 
 // ---------------------------------------------------------------------------
 // RAPOR (metrikler)
