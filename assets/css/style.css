@@ -194,22 +194,17 @@ a { color: inherit; }
 .metric-card--hero {
   background: var(--accent-tint);
   border-color: #d6e3fb;
+  position: relative;
 }
-.metric-card--hero::after {
-  content: "ROAS";
-  position: absolute;
-  top: 20px;
-  right: 22px;
-  font-size: 11px;
-  font-weight: 700;
-  letter-spacing: 0.08em;
-  color: var(--violet);
-}
-.metric-card--hero { position: relative; }
 .metric-card--hero .metric-card__value {
   font-size: 40px;
   font-weight: 800;
   color: var(--violet);
+}
+
+/* Mobilde 6. kart (Toplam Sipariş) tek başına kalmasın diye tam genişlik alsın */
+@media (max-width: 720px) {
+  .metric-card:nth-child(6) { grid-column: 1 / -1; }
 }
 
 @media (max-width: 720px) {
@@ -270,46 +265,35 @@ a { color: inherit; }
   background: #0a0a0d;
 }
 .hook-card__media video { width: 100%; height: 100%; object-fit: cover; display: block; }
-.hook-card__rate {
-  position: absolute;
-  top: 10px; right: 10px;
-  background: rgba(255, 255, 255, 0.92);
-  border: 1px solid var(--glass-border);
-  border-radius: 999px;
-  padding: 5px 11px;
-  font-size: 11.5px;
-  font-weight: 700;
-  color: var(--violet);
-}
 
 .hook-card__body { padding: 14px 16px 16px; }
 .hook-card__title {
   font-family: var(--font-display);
   font-size: 14px;
   font-weight: 600;
-  margin: 0 0 10px;
+  margin: 0 0 12px;
   color: var(--text);
 }
 
-.hook-card__timeline {
-  height: 4px;
-  border-radius: 999px;
-  background: #eef0f3;
-  position: relative;
-  overflow: hidden;
-  margin-bottom: 7px;
-}
-.hook-card__timeline span {
-  position: absolute;
-  top: 0; bottom: 0;
-  background: var(--violet);
-  border-radius: 999px;
-}
-.hook-card__timeline-label {
-  font-size: 10px;
-  color: var(--text-faint);
+.hook-card__stat {
   display: flex;
+  align-items: center;
   justify-content: space-between;
+  background: var(--accent-tint);
+  border: 1px solid #d6e3fb;
+  border-radius: var(--radius-sm);
+  padding: 10px 14px;
+}
+.hook-card__stat-label {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--text-muted);
+}
+.hook-card__stat-value {
+  font-family: var(--font-display);
+  font-size: 20px;
+  font-weight: 800;
+  color: var(--violet);
 }
 
 .hooks-empty {
@@ -418,9 +402,17 @@ a { color: inherit; }
 }
 
 @media (max-width: 640px) {
-  .report-header { padding: 22px 20px; }
-  .report-header__meta { text-align: left; }
-  .report-header__title h1 { font-size: 20px; }
+  .report-header {
+    padding: 16px 18px;
+    flex-wrap: nowrap;
+    gap: 12px;
+  }
+  .report-header__brand { gap: 10px; }
+  .report-header__logo { width: 40px; height: 40px; border-radius: 10px; }
+  .report-header__meta { text-align: right; flex-shrink: 0; }
+  .report-header__title h1 { font-size: 16px; }
+  .report-header__meta .eyebrow { font-size: 9px; }
+  .report-header__meta .date { font-size: 12px; }
   .metric-card--hero .metric-card__value { font-size: 32px; }
   .shell { padding: 18px 14px 60px; }
 }

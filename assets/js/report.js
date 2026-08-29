@@ -70,7 +70,7 @@ function render(brand, report, videos) {
   document.getElementById("reportRoot").style.display = "block";
 
   document.getElementById("brandName").textContent = brand.name;
-  document.title = `${brand.name} — Aylık Performans Raporu`;
+  document.title = `${brand.name} — Performans Raporu`;
 
   const logoEl = document.getElementById("brandLogo");
   if (brand.logo_url) {
@@ -105,23 +105,17 @@ function renderHooks(videos) {
     const card = document.createElement("div");
     card.className = "hook-card";
 
-    const original = v.original_duration || Math.max(v.clip_end, 1);
-    const startPct = original > 0 ? (v.clip_start / original) * 100 : 0;
-    const widthPct = original > 0 ? ((v.clip_end - v.clip_start) / original) * 100 : 100;
-
     card.innerHTML = `
       <div class="hook-card__media">
         <video src="${v.video_url}" controls playsinline preload="metadata"></video>
-        ${v.hook_rate != null ? `<div class="hook-card__rate">%${v.hook_rate} hook</div>` : ""}
       </div>
       <div class="hook-card__body">
         <p class="hook-card__title">${escapeHtml(v.title || "Başlıksız")}</p>
-        <div class="hook-card__timeline"><span style="left:${startPct}%; width:${Math.max(widthPct, 3)}%;"></span></div>
-        <div class="hook-card__timeline-label">
-          <span>${v.clip_start.toFixed(1)}sn</span>
-          <span>orijinal videodaki konum</span>
-          <span>${v.clip_end.toFixed(1)}sn</span>
-        </div>
+        ${v.hook_rate != null ? `
+        <div class="hook-card__stat">
+          <span class="hook-card__stat-label">Hook Rate</span>
+          <span class="hook-card__stat-value">%${v.hook_rate}</span>
+        </div>` : ""}
       </div>`;
     grid.appendChild(card);
   });
