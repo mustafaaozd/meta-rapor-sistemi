@@ -189,7 +189,7 @@ a { color: inherit; }
   align-items: baseline;
   gap: 4px;
 }
-.metric-card__value .unit { font-size: 14px; color: var(--text-muted); font-weight: 500; }
+.metric-card__value .unit { font-size: 20px; color: var(--text-muted); font-weight: 600; }
 
 .metric-card--hero {
   background: var(--accent-tint);
@@ -202,21 +202,11 @@ a { color: inherit; }
   color: var(--violet);
 }
 
-/* Mobilde 6. kart (Toplam Sipariş) tek başına kalmasın diye tam genişlik alsın */
-@media (max-width: 720px) {
-  .metric-card:nth-child(6) { grid-column: 1 / -1; }
-}
-
-@media (max-width: 720px) {
-  .metrics-grid { grid-template-columns: 1fr 1fr; }
-  .metric-card--hero { grid-column: 1 / -1; }
-}
-@media (max-width: 440px) {
-  .metrics-grid { gap: 10px; }
-  .metric-card { padding: 18px 16px 16px; }
-  .metric-card__value { font-size: 21px; }
-  .metric-card__icon { width: 30px; height: 30px; margin-bottom: 10px; }
-  .metric-card__icon svg { width: 15px; height: 15px; }
+@media (max-width: 640px) {
+  .metrics-grid { grid-template-columns: 1fr; gap: 10px; }
+  .metric-card { padding: 18px 18px 16px; }
+  .metric-card__value { font-size: 22px; }
+  .metric-card--hero .metric-card__value { font-size: 34px; }
 }
 
 /* ---------- Kancalar (video hooks) bölümü ---------- */
@@ -403,16 +393,25 @@ a { color: inherit; }
 
 @media (max-width: 640px) {
   .report-header {
-    padding: 16px 18px;
-    flex-wrap: nowrap;
-    gap: 12px;
+    padding: 18px 18px;
+    flex-wrap: wrap;
+    gap: 10px;
   }
   .report-header__brand { gap: 10px; }
-  .report-header__logo { width: 40px; height: 40px; border-radius: 10px; }
-  .report-header__meta { text-align: right; flex-shrink: 0; }
-  .report-header__title h1 { font-size: 16px; }
-  .report-header__meta .eyebrow { font-size: 9px; }
-  .report-header__meta .date { font-size: 12px; }
+  .report-header__logo { width: 42px; height: 42px; border-radius: 11px; }
+  .report-header__title .eyebrow { display: none; }
+  .report-header__title h1 { font-size: 18px; margin-top: 0; }
+  .report-header__meta {
+    text-align: left;
+    width: 100%;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    padding-top: 10px;
+    border-top: 1px solid var(--glass-border);
+  }
+  .report-header__meta .eyebrow { margin-bottom: 0; }
+  .report-header__meta .date { font-size: 13px; }
   .metric-card--hero .metric-card__value { font-size: 32px; }
   .shell { padding: 18px 14px 60px; }
 }
