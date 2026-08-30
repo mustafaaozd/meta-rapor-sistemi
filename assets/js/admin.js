@@ -208,14 +208,47 @@ async function selectBrand(id) {
 
   const shareBox = document.getElementById("shareBox");
   shareBox.style.display = "block";
-  const link = `${window.location.origin}${window.location.pathname.replace(/index\.html$/, "")}rapor/?t=${currentBrand.access_token}`;
+  const base = `${window.location.origin}${window.location.pathname.replace(/index\.html$/, "")}`;
+  const link = `${base}rapor/?t=${currentBrand.access_token}`;
   document.getElementById("shareLinkText").textContent = link;
   document.getElementById("copyLinkBtn").onclick = () => {
     navigator.clipboard.writeText(link);
     showToast("Link kopyalandı.");
   };
+  const dailyLink = `${base}gunluk/?t=${currentBrand.access_token}`;
+  document.getElementById("shareDailyLinkText").textContent = dailyLink;
+  document.getElementById("copyDailyLinkBtn").onclick = () => {
+    navigator.clipboard.writeText(dailyLink);
+    showToast("Link kopyalandı.");
+  };
 
   await loadOrCreateReport();
+  if (currentMode === "daily") {
+    await loadDailyEntries();
+    await loadCreatives();
+  }
+}
+
+// ---------------------------------------------------------------------------
+// AYLIK / GÜNLÜK GEÇİŞ
+// ---------------------------------------------------------------------------
+
+let currentMode = "monthly";
+
+document.getElementById("modeMonthlyBtn").addEventListener("click", () => switchMode("monthly"));
+document.getElementById("modeDailyBtn").addEventListener("click", () => switchMode("daily"));
+
+async function switchMode(mode) {
+  currentMode = mode;
+  document.getElementById("modeMonthlyBtn").classList.toggle("active", mode === "monthly");
+  document.getElementById("modeDailyBtn").classList.toggle("active", mode === "daily");
+  document.getElementById("monthlyView").style.display = mode === "monthly" ? "block" : "none";
+  document.getElementById("dailyView").style.display = mode === "daily" ? "block" : "none";
+
+  if (mode === "daily" && currentBrand) {
+    await loadDailyEntries();
+    await loadCreatives();
+  }
 }
 
 // ---------------------------------------------------------------------------
@@ -466,6 +499,265 @@ async function deleteVideo(id, url) {
   showToast("Video silindi.");
   await loadVideos();
 }
+
+// ---------------------------------------------------------------------------
+// GÜNLÜK TAKİP (Gün Gün Takip tablosu)
+// ---------------------------------------------------------------------------
+
+async function loadDailyEntries() {
+  if (!currentBrand) return;
+  const { data, error } = await supabaseClient
+    .from("daily_entries")
+    .select("*")
+    .eq("brand_id", currentBrand.id)
+    .order("entry_date", { ascending: false });
+
+  if (error) return;
+  renderDailyTable(data || []);
+}
+
+function renderDailyTable(rows) {
+  const body = document.getElementById("dailyTableBody");
+  const emptyHint = document.getElementById("dailyEmptyHint");
+  body.innerHTML = "";
+
+  emptyHint.style.display = rows.length ? "none" : "block";
+
+  rows.forEach((row) => {
+    const tr = document.createElement("tr");
+    const roas = row.ad_spend > 0 ? (row.revenue / row.ad_spend).toFixed(2) : "—";
+    tr.innerHTML = `
+      <td><input type="date" value="${row.entry_date}" data-field="entry_date" /></td>
+      <td><input type="number" step="0.01" value="${row.ad_spend}" data-field="ad_spend" /></td>
+      <td><input type="number" step="0.01" value="${row.revenue}" data-field="revenue" /></td>
+      <td class="roas-cell">${roas === "—" ? "—" : "x" + roas}</td>
+      <td><button class="row-delete" title="Sil">🗑</button></td>`;
+
+    const roasCell = tr.querySelector(".roas-cell");
+    tr.querySelectorAll("input").forEach((input) => {
+      input.addEventListener("change", async () => {
+        const field = input.dataset.field;
+        const value = field === "entry_date" ? input.value : parseFloat(input.value) || 0;
+        await supabaseClient.from("daily_entries").update({ [field]: value }).eq("id", row.id);
+        const spend = parseFloat(tr.querySelector('[data-field="ad_spend"]').value) || 0;
+        const rev = parseFloat(tr.querySelector('[data-field="revenue"]').value) || 0;
+        roasCell.textContent = spend > 0 ? "x" + (rev / spend).toFixed(2) : "—";
+      });
+    });
+    tr.querySelector(".row-delete").addEventListener("click", async () => {
+      if (!confirm("Bu günü silmek istediğine emin misin?")) return;
+      await supabaseClient.from("daily_entries").delete().eq("id", row.id);
+      await loadDailyEntries();
+    });
+
+    body.appendChild(tr);
+  });
+}
+
+document.getElementById("addDayBtn").addEventListener("click", async () => {
+  if (!currentBrand) return;
+  const { error } = await supabaseClient.from("daily_entries").insert({
+    brand_id: currentBrand.id,
+    entry_date: todayISO(),
+    ad_spend: 0,
+    revenue: 0,
+    sort_order: Date.now(),
+  });
+  if (error) {
+    showToast("Gün eklenemedi.", true);
+    return;
+  }
+  await loadDailyEntries();
+});
+
+// ---------------------------------------------------------------------------
+// KREATİF TEST SONUÇLARI (görsel/video + reklam setleri)
+// ---------------------------------------------------------------------------
+
+const SET_COLORS = ["blue", "red", "green"];
+
+async function loadCreatives() {
+  if (!currentBrand) return;
+  const { data, error } = await supabaseClient
+    .from("creatives")
+    .select("*, creative_sets(*)")
+    .eq("brand_id", currentBrand.id)
+    .order("sort_order", { ascending: true });
+
+  if (error) return;
+  renderCreatives(data || []);
+}
+
+function renderCreatives(creatives) {
+  const list = document.getElementById("creativeList");
+  list.innerHTML = "";
+
+  if (!creatives.length) {
+    list.innerHTML = `<p class="empty-hint">Henüz kreatif eklenmedi.</p>`;
+    return;
+  }
+
+  creatives.forEach((creative) => {
+    const card = document.createElement("div");
+    card.className = "creative-card";
+
+    const mediaTag =
+      creative.media_type === "video"
+        ? `<video src="${creative.media_url}" muted playsinline></video>`
+        : `<img src="${creative.media_url}" alt="" />`;
+
+    card.innerHTML = `
+      <div class="creative-card__top">
+        <div class="creative-card__media">${mediaTag}</div>
+        <div class="creative-card__info">
+          <input type="text" value="${escapeHtml(creative.title || "")}" placeholder="Kreatif adı" data-field="title" />
+          <textarea placeholder="Not (örn. tıklama oranı düşük, sepete ekleme maliyeti yüksek...)" data-field="note">${escapeHtml(creative.note || "")}</textarea>
+        </div>
+        <button class="creative-card__delete" title="Kreatifi sil">🗑</button>
+      </div>
+      <div class="creative-sets">
+        <table>
+          <thead><tr><th>Set</th><th>Tarih</th><th>Harcama (₺)</th><th>Satış</th><th>ROAS</th><th></th></tr></thead>
+          <tbody></tbody>
+        </table>
+        <button class="add-set-btn" type="button">+ Set Ekle</button>
+      </div>`;
+
+    card.querySelector('[data-field="title"]').addEventListener("change", async (e) => {
+      await supabaseClient.from("creatives").update({ title: e.target.value }).eq("id", creative.id);
+    });
+    card.querySelector('[data-field="note"]').addEventListener("change", async (e) => {
+      await supabaseClient.from("creatives").update({ note: e.target.value }).eq("id", creative.id);
+    });
+    card.querySelector(".creative-card__delete").addEventListener("click", () => deleteCreative(creative));
+
+    const tbody = card.querySelector("tbody");
+    const sets = (creative.creative_sets || []).sort((a, b) => a.sort_order - b.sort_order);
+    sets.forEach((set) => renderSetRow(tbody, creative, set));
+
+    card.querySelector(".add-set-btn").addEventListener("click", () => addSet(creative, tbody));
+
+    list.appendChild(card);
+  });
+}
+
+function renderSetRow(tbody, creative, set) {
+  const tr = document.createElement("tr");
+  const roas = set.spend > 0 ? (set.sales / set.spend).toFixed(2) : "—";
+  tr.innerHTML = `
+    <td><span class="set-badge ${set.color}">${escapeHtml(set.label)}</span></td>
+    <td><input type="date" value="${set.start_date || ""}" data-field="start_date" /></td>
+    <td><input type="number" step="0.01" value="${set.spend}" data-field="spend" /></td>
+    <td><input type="number" step="0.01" value="${set.sales}" data-field="sales" /></td>
+    <td class="set-roas">${roas === "—" ? "—" : "x" + roas}</td>
+    <td><button class="row-delete" title="Sil">🗑</button></td>`;
+
+  const roasCell = tr.querySelector(".set-roas");
+  tr.querySelectorAll("input").forEach((input) => {
+    input.addEventListener("change", async () => {
+      const field = input.dataset.field;
+      const value = field === "start_date" ? input.value : parseFloat(input.value) || 0;
+      await supabaseClient.from("creative_sets").update({ [field]: value }).eq("id", set.id);
+      const spend = parseFloat(tr.querySelector('[data-field="spend"]').value) || 0;
+      const sales = parseFloat(tr.querySelector('[data-field="sales"]').value) || 0;
+      roasCell.textContent = spend > 0 ? "x" + (sales / spend).toFixed(2) : "—";
+    });
+  });
+
+  tr.querySelector(".set-badge").addEventListener("click", async () => {
+    const nextColor = SET_COLORS[(SET_COLORS.indexOf(set.color) + 1) % SET_COLORS.length];
+    set.color = nextColor;
+    await supabaseClient.from("creative_sets").update({ color: nextColor }).eq("id", set.id);
+    tr.querySelector(".set-badge").className = `set-badge ${nextColor}`;
+  });
+
+  tr.querySelector(".row-delete").addEventListener("click", async () => {
+    if (!confirm("Bu seti silmek istediğine emin misin?")) return;
+    await supabaseClient.from("creative_sets").delete().eq("id", set.id);
+    tr.remove();
+  });
+
+  tbody.appendChild(tr);
+}
+
+async function addSet(creative, tbody) {
+  const count = tbody.querySelectorAll("tr").length + 1;
+  const { data, error } = await supabaseClient
+    .from("creative_sets")
+    .insert({
+      creative_id: creative.id,
+      label: `Set #${count}`,
+      color: SET_COLORS[(count - 1) % SET_COLORS.length],
+      start_date: todayISO(),
+      spend: 0,
+      sales: 0,
+      sort_order: Date.now(),
+    })
+    .select()
+    .single();
+
+  if (error) {
+    showToast("Set eklenemedi.", true);
+    return;
+  }
+  renderSetRow(tbody, creative, data);
+}
+
+async function deleteCreative(creative) {
+  if (!confirm(`"${creative.title || "Bu kreatif"}" silinsin mi? Tüm setleri de silinir.`)) return;
+
+  await supabaseClient.from("creatives").delete().eq("id", creative.id);
+
+  try {
+    const path = decodeURIComponent(creative.media_url.split(`/${CREATIVE_BUCKET}/`)[1]);
+    if (path) await supabaseClient.storage.from(CREATIVE_BUCKET).remove([path]);
+  } catch (_) {}
+
+  showToast("Kreatif silindi.");
+  await loadCreatives();
+}
+
+document.getElementById("addCreativeBtn").addEventListener("click", () => {
+  if (!currentBrand) return;
+  document.getElementById("creativeFileInput").click();
+});
+
+document.getElementById("creativeFileInput").addEventListener("change", async (e) => {
+  const file = e.target.files[0];
+  e.target.value = "";
+  if (!file || !currentBrand) return;
+
+  const mediaType = file.type.startsWith("video") ? "video" : "image";
+  const ext = file.name.split(".").pop();
+  const path = `${currentBrand.id}/${Date.now()}.${ext}`;
+
+  const { error: uploadError } = await supabaseClient.storage
+    .from(CREATIVE_BUCKET)
+    .upload(path, file, { contentType: file.type, upsert: false });
+
+  if (uploadError) {
+    showToast("Kreatif yüklenemedi.", true);
+    return;
+  }
+
+  const { data: publicUrlData } = supabaseClient.storage.from(CREATIVE_BUCKET).getPublicUrl(path);
+
+  const { error: insertError } = await supabaseClient.from("creatives").insert({
+    brand_id: currentBrand.id,
+    title: file.name.replace(/\.[^.]+$/, ""),
+    media_type: mediaType,
+    media_url: publicUrlData.publicUrl,
+    sort_order: Date.now(),
+  });
+
+  if (insertError) {
+    showToast("Kreatif kaydedilemedi.", true);
+    return;
+  }
+
+  showToast("Kreatif eklendi.");
+  await loadCreatives();
+});
 
 // ---------------------------------------------------------------------------
 initAuth();

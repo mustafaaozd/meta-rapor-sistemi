@@ -321,7 +321,103 @@
 .toast--error { background: var(--danger); }
 @keyframes toastIn { from { opacity: 0; transform: translate(-50%, 10px); } to { opacity: 1; transform: translate(-50%, 0); } }
 
-/* Marka logosu yükleme */
+/* Aylık / Günlük geçiş */
+.mode-switch {
+  display: flex;
+  background: #f2f3f5;
+  border-radius: 999px;
+  padding: 3px;
+  gap: 2px;
+}
+.mode-switch__btn {
+  border: none;
+  background: transparent;
+  color: var(--text-muted);
+  font-size: 12.5px;
+  font-weight: 600;
+  padding: 8px 16px;
+  border-radius: 999px;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+.mode-switch__btn.active { background: #fff; color: var(--text); box-shadow: 0 1px 2px rgba(20,20,30,0.08); }
+.mode-switch__btn:hover:not(.active) { color: var(--text); }
+
+/* Günlük takip tablosu */
+.daily-table { width: 100%; border-collapse: collapse; min-width: 560px; }
+.daily-table th {
+  text-align: left;
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--text-faint);
+  font-weight: 700;
+  padding: 8px 10px;
+  border-bottom: 1px solid var(--glass-border);
+}
+.daily-table td { padding: 6px 10px; border-bottom: 1px solid var(--glass-border); }
+.daily-table input {
+  width: 100%;
+  border: 1px solid var(--glass-border);
+  border-radius: 8px;
+  padding: 8px 10px;
+  font-size: 13px;
+  background: #fff;
+  color: var(--text);
+}
+.daily-table input:focus { border-color: var(--violet); outline: none; }
+.daily-table .roas-cell { font-weight: 700; color: var(--violet); white-space: nowrap; }
+.daily-table .row-delete { background: none; border: none; color: var(--text-faint); cursor: pointer; font-size: 13px; padding: 6px; }
+.daily-table .row-delete:hover { color: var(--danger); }
+
+/* Kreatif listesi */
+.creative-list { display: flex; flex-direction: column; gap: 16px; }
+.creative-card {
+  border: 1px solid var(--glass-border);
+  border-radius: var(--radius-md);
+  overflow: hidden;
+  background: #fafafb;
+}
+.creative-card__top { display: flex; gap: 14px; padding: 14px; border-bottom: 1px solid var(--glass-border); }
+.creative-card__media {
+  width: 84px; height: 84px; border-radius: 10px; overflow: hidden; background: #0a0a0d; flex-shrink: 0;
+}
+.creative-card__media img, .creative-card__media video { width: 100%; height: 100%; object-fit: cover; }
+.creative-card__info { flex: 1; min-width: 0; }
+.creative-card__info input[type="text"] {
+  width: 100%; border: 1px solid var(--glass-border); border-radius: 8px; padding: 8px 10px;
+  font-size: 13px; font-weight: 600; background: #fff; color: var(--text); margin-bottom: 8px;
+}
+.creative-card__info textarea {
+  width: 100%; border: 1px solid var(--glass-border); border-radius: 8px; padding: 8px 10px;
+  font-size: 12.5px; background: #fff; color: var(--text); resize: vertical; min-height: 44px;
+}
+.creative-card__delete { background: none; border: none; color: var(--text-faint); cursor: pointer; font-size: 12px; padding: 6px; align-self: flex-start; }
+.creative-card__delete:hover { color: var(--danger); }
+
+.creative-sets { padding: 12px 14px 14px; }
+.creative-sets table { width: 100%; border-collapse: collapse; }
+.creative-sets th {
+  font-size: 10px; text-transform: uppercase; letter-spacing: 0.04em; color: var(--text-faint);
+  font-weight: 700; padding: 6px 6px; text-align: left;
+}
+.creative-sets td { padding: 4px 6px; }
+.creative-sets input {
+  width: 100%; border: 1px solid var(--glass-border); border-radius: 7px; padding: 6px 8px;
+  font-size: 12px; background: #fff; color: var(--text);
+}
+.set-badge {
+  display: inline-block; padding: 4px 9px; border-radius: 6px; font-size: 10.5px; font-weight: 700; color: #fff; cursor: pointer; white-space: nowrap;
+}
+.set-badge.blue { background: var(--violet); }
+.set-badge.red { background: #e14b4b; }
+.set-badge.green { background: #1a9c6b; }
+.set-roas { font-weight: 700; color: var(--violet); font-size: 12px; white-space: nowrap; }
+.add-set-btn {
+  margin-top: 8px; background: none; border: 1px dashed var(--glass-border-strong); color: var(--text-muted);
+  border-radius: 8px; padding: 7px 12px; font-size: 12px; cursor: pointer; font-weight: 600;
+}
+.add-set-btn:hover { border-color: var(--violet); color: var(--violet); }
 .brand-logo-upload {
   width: 50px;
   height: 50px;

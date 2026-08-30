@@ -177,7 +177,11 @@ a { color: inherit; }
   color: var(--text-muted);
   font-weight: 500;
   margin-bottom: 10px;
+  display: flex;
+  align-items: center;
+  gap: 6px;
 }
+.metric-card__label .mi { width: 14px; height: 14px; color: var(--text-faint); flex-shrink: 0; }
 
 .metric-card__value {
   font-family: var(--font-display);

@@ -1,0 +1,83 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1" />
+<title>Günlük Performans Raporu</title>
+<link rel="icon" href="data:,">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="../assets/css/style.css" />
+<link rel="stylesheet" href="../assets/css/daily.css" />
+</head>
+<body>
+
+<div id="loadingState" class="state-screen">
+  <div class="spinner"></div>
+  <p>Rapor hazırlanıyor…</p>
+</div>
+
+<div id="errorState" class="state-screen" style="display:none;">
+  <p>Bu bağlantı geçersiz görünüyor. Lütfen ajansınızla iletişime geçin.</p>
+</div>
+
+<div id="reportRoot" class="shell" style="display:none;">
+
+  <header class="report-header fade-in">
+    <div class="report-header__brand">
+      <div class="report-header__logo" id="brandLogo"><span>LOGO</span></div>
+      <div class="report-header__title">
+        <span class="eyebrow">Günlük Performans Raporu</span>
+        <h1 id="brandName">—</h1>
+      </div>
+    </div>
+    <div class="report-header__meta">
+      <span class="eyebrow">Takip Edilen Gün</span>
+      <span class="date" id="dayCount">—</span>
+    </div>
+  </header>
+
+  <section class="metrics-grid fade-in" style="margin-top:16px;">
+    <div class="metric-card">
+      <div class="metric-card__label">Toplam Harcama</div>
+      <div class="metric-card__value"><span class="unit">₺</span><span id="mTotalSpend">0</span></div>
+    </div>
+    <div class="metric-card">
+      <div class="metric-card__label">Toplam Ciro</div>
+      <div class="metric-card__value"><span class="unit">₺</span><span id="mTotalRevenue">0</span></div>
+    </div>
+    <div class="metric-card metric-card--hero">
+      <div class="metric-card__label">Ortalama ROAS</div>
+      <div class="metric-card__value" id="mAvgRoas">—</div>
+    </div>
+  </section>
+
+  <div class="section-title fade-in">
+    <h2>Gün Gün Takip</h2>
+  </div>
+
+  <section class="fade-in" style="overflow-x:auto;">
+    <table class="daily-table-view" id="dailyTable">
+      <thead>
+        <tr><th>Tarih</th><th>Harcanan Tutar</th><th>Ciro</th><th>ROAS</th></tr>
+      </thead>
+      <tbody id="dailyTableBody"></tbody>
+    </table>
+    <p class="hooks-empty" id="dailyEmpty" style="display:none;">Henüz günlük veri eklenmedi.</p>
+  </section>
+
+  <div class="section-title fade-in">
+    <h2>Kreatif Test Sonuçları</h2>
+  </div>
+
+  <section class="creative-view-list fade-in" id="creativeList">
+    <div class="hooks-empty">Henüz kreatif eklenmedi.</div>
+  </section>
+
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="../assets/js/supabaseClient.js"></script>
+<script src="../assets/js/dailyReport.js"></script>
+</body>
+</html>

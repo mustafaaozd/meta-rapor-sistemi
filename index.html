@@ -37,6 +37,10 @@
 
   <div class="admin-topbar">
     <div class="admin-topbar__brandmark"><span class="dot"></span> Meta Raporu · Panel</div>
+    <div class="mode-switch">
+      <button class="mode-switch__btn active" id="modeMonthlyBtn" type="button">Aylık Rapor</button>
+      <button class="mode-switch__btn" id="modeDailyBtn" type="button">Günlük Rapor</button>
+    </div>
     <button class="btn btn--ghost btn--sm" id="logoutBtn">Çıkış Yap</button>
   </div>
 
@@ -52,10 +56,15 @@
     </form>
 
     <div class="share-box" id="shareBox" style="display:none;">
-      <h3 style="margin-bottom:8px;">Müşteri Linki</h3>
+      <h3 style="margin-bottom:8px;">Aylık Rapor Linki</h3>
       <div class="share-box__link">
         <span id="shareLinkText">—</span>
         <button class="btn btn--sm btn--ghost" id="copyLinkBtn" type="button">Kopyala</button>
+      </div>
+      <h3 style="margin:14px 0 8px;">Günlük Rapor Linki</h3>
+      <div class="share-box__link">
+        <span id="shareDailyLinkText">—</span>
+        <button class="btn btn--sm btn--ghost" id="copyDailyLinkBtn" type="button">Kopyala</button>
       </div>
     </div>
   </aside>
@@ -63,6 +72,7 @@
   <!-- SAĞ İÇERİK -->
   <main class="admin-main" id="mainContent" style="display:none;">
 
+  <div id="monthlyView">
     <!-- Rapor tarihi + metrik formu -->
     <section class="card fade-in">
       <div class="card__head">
@@ -123,6 +133,41 @@
         </button>
       </div>
     </section>
+  </div>
+
+  <div id="dailyView" style="display:none;">
+    <section class="card fade-in">
+      <div class="card__head">
+        <h2>Gün Gün Takip</h2>
+        <button class="btn btn--primary btn--sm" id="addDayBtn" type="button">+ Gün Ekle</button>
+      </div>
+      <div style="overflow-x:auto;">
+        <table class="daily-table" id="dailyTable">
+          <thead>
+            <tr>
+              <th>Tarih</th>
+              <th>Harcanan Tutar (₺)</th>
+              <th>Ciro (₺)</th>
+              <th>ROAS</th>
+              <th></th>
+            </tr>
+          </thead>
+          <tbody id="dailyTableBody"></tbody>
+        </table>
+      </div>
+      <p class="empty-hint" id="dailyEmptyHint" style="display:none;">Henüz gün eklenmedi. "Gün Ekle" ile başla.</p>
+    </section>
+
+    <section class="card fade-in">
+      <div class="card__head">
+        <h2>Kreatif Test Sonuçları</h2>
+        <span class="eyebrow">Görsel veya video, her biri birden fazla reklam setinde test edilebilir</span>
+      </div>
+      <div class="creative-list" id="creativeList"></div>
+      <button class="btn btn--ghost btn--block" id="addCreativeBtn" type="button" style="margin-top:14px;">+ Kreatif Ekle (Görsel / Video)</button>
+      <input type="file" id="creativeFileInput" accept="image/*,video/*" style="display:none;" />
+    </section>
+  </div>
 
   </main>
 
