@@ -18,6 +18,7 @@ create table if not exists reports (
   id uuid primary key default gen_random_uuid(),
   brand_id uuid not null references brands(id) on delete cascade,
   report_date date not null default current_date,
+  report_date_end date,
   ad_spend numeric not null default 0,
   revenue numeric not null default 0,
   add_to_cart integer not null default 0,

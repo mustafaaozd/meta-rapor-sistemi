@@ -84,7 +84,11 @@
           <h2 id="activeBrandTitle">Rapor Bilgileri</h2>
         </div>
         <input type="file" id="brandLogoInput" accept="image/*" style="display:none;" />
-        <input type="date" id="reportDate" style="background:var(--glass); border:1px solid var(--glass-border); color:var(--text); border-radius:var(--radius-sm); padding:9px 12px; font-family:var(--font-mono); font-size:13px;" />
+        <div style="display:flex; align-items:center; gap:6px;">
+          <input type="date" id="reportDateStart" style="background:var(--glass); border:1px solid var(--glass-border); color:var(--text); border-radius:var(--radius-sm); padding:9px 10px; font-family:var(--font-mono); font-size:12.5px;" />
+          <span style="color:var(--text-faint); font-size:12px;">—</span>
+          <input type="date" id="reportDateEnd" style="background:var(--glass); border:1px solid var(--glass-border); color:var(--text); border-radius:var(--radius-sm); padding:9px 10px; font-family:var(--font-mono); font-size:12.5px;" />
+        </div>
       </div>
 
       <div class="form-grid">

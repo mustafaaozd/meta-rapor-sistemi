@@ -14,6 +14,19 @@ function formatDate(iso) {
   return new Intl.DateTimeFormat("tr-TR", { day: "2-digit", month: "long", year: "numeric" }).format(d);
 }
 
+function formatDateRange(startIso, endIso) {
+  if (!startIso) return "—";
+  if (!endIso || endIso === startIso) return formatDate(startIso);
+  const start = new Date(startIso + "T00:00:00");
+  const end = new Date(endIso + "T00:00:00");
+  const sameMonth = start.getMonth() === end.getMonth() && start.getFullYear() === end.getFullYear();
+  const startFmt = sameMonth
+    ? new Intl.DateTimeFormat("tr-TR", { day: "2-digit" }).format(start)
+    : new Intl.DateTimeFormat("tr-TR", { day: "2-digit", month: "long" }).format(start);
+  const endFmt = new Intl.DateTimeFormat("tr-TR", { day: "2-digit", month: "long", year: "numeric" }).format(end);
+  return `${startFmt} – ${endFmt}`;
+}
+
 async function init() {
   const params = new URLSearchParams(window.location.search);
   const token = params.get("t");
@@ -77,7 +90,7 @@ function render(brand, report, videos) {
     logoEl.innerHTML = `<img src="${brand.logo_url}" alt="${brand.name} logo" />`;
   }
 
-  document.getElementById("reportDate").textContent = report ? formatDate(report.report_date) : "—";
+  document.getElementById("reportDate").textContent = report ? formatDateRange(report.report_date, report.report_date_end) : "—";
 
   const adSpend = report ? report.ad_spend : 0;
   const revenue = report ? report.revenue : 0;

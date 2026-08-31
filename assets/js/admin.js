@@ -315,7 +315,8 @@ document.getElementById("brandLogoInput").addEventListener("change", async (e) =
 // ---------------------------------------------------------------------------
 
 async function loadOrCreateReport() {
-  document.getElementById("reportDate").value = todayISO();
+  document.getElementById("reportDateStart").value = todayISO();
+  document.getElementById("reportDateEnd").value = "";
 
   const { data, error } = await supabaseClient
     .from("reports")
@@ -332,7 +333,8 @@ async function loadOrCreateReport() {
 
   if (data) {
     currentReportId = data.id;
-    document.getElementById("reportDate").value = data.report_date;
+    document.getElementById("reportDateStart").value = data.report_date;
+    document.getElementById("reportDateEnd").value = data.report_date_end || "";
     document.getElementById("fAdSpend").value = data.ad_spend;
     document.getElementById("fRevenue").value = data.revenue;
     document.getElementById("fAddToCart").value = data.add_to_cart;
@@ -369,7 +371,8 @@ document.getElementById("saveReportBtn").addEventListener("click", async () => {
 
   const payload = {
     brand_id: currentBrand.id,
-    report_date: document.getElementById("reportDate").value || todayISO(),
+    report_date: document.getElementById("reportDateStart").value || todayISO(),
+    report_date_end: document.getElementById("reportDateEnd").value || null,
     ad_spend: parseFloat(document.getElementById("fAdSpend").value) || 0,
     revenue: parseFloat(document.getElementById("fRevenue").value) || 0,
     add_to_cart: parseInt(document.getElementById("fAddToCart").value) || 0,
