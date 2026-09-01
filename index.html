@@ -94,23 +94,23 @@
       <div class="form-grid">
         <div class="field">
           <label>Reklam Harcama Tutarı (₺)</label>
-          <input type="number" step="0.01" min="0" id="fAdSpend" placeholder="0" />
+          <input type="text" inputmode="numeric" id="fAdSpend" placeholder="0" />
         </div>
         <div class="field">
           <label>Ciro (₺)</label>
-          <input type="number" step="0.01" min="0" id="fRevenue" placeholder="0" />
+          <input type="text" inputmode="numeric" id="fRevenue" placeholder="0" />
         </div>
         <div class="field">
           <label>Sepete Ekleme</label>
-          <input type="number" step="1" min="0" id="fAddToCart" placeholder="0" />
+          <input type="text" inputmode="numeric" id="fAddToCart" placeholder="0" />
         </div>
         <div class="field">
           <label>Ödeme Adımına Geçme</label>
-          <input type="number" step="1" min="0" id="fCheckout" placeholder="0" />
+          <input type="text" inputmode="numeric" id="fCheckout" placeholder="0" />
         </div>
         <div class="field">
           <label>Toplam Sipariş Adedi</label>
-          <input type="number" step="1" min="0" id="fOrders" placeholder="0" />
+          <input type="text" inputmode="numeric" id="fOrders" placeholder="0" />
         </div>
       </div>
 
@@ -222,7 +222,7 @@
     </div>
     <div class="field">
       <label>Hook Rate (%)</label>
-      <input type="number" step="0.1" min="0" max="100" id="hookRateInput" placeholder="örn. 42" />
+      <input type="text" inputmode="numeric" id="hookRateInput" placeholder="örn. 42" />
     </div>
 
     <p class="trim-duration-note" id="trimStatusNote" style="min-height:16px;"></p>
@@ -236,6 +236,20 @@
 </div>
 
 <div id="toastRoot"></div>
+
+<!-- Sayıları otomatik binlik ayraca (nokta) çeviren script -->
+<script>
+document.addEventListener('input', function (e) {
+    if (e.target.matches('input[type="text"][inputmode="numeric"], input#fAdSpend, input#fRevenue, input#fAddToCart, input#fCheckout, input#fOrders')) {
+        let el = e.target;
+        let val = el.value.replace(/\D/g, ''); // Sadece rakamları al, virgül veya noktaları temizle
+        if (val !== '') {
+            val = Number(val).toLocaleString('tr-TR'); // 3 basamakta bir nokta ekle
+        }
+        el.value = val;
+    }
+});
+</script>
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script src="assets/js/supabaseClient.js"></script>
