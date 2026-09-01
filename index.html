@@ -14,242 +14,228 @@
 
 <!-- ============== GİRİŞ EKRANI ============== -->
 <div id="loginScreen" class="login-screen">
-  <div class="login-card fade-in">
-    <span class="eyebrow">Meta Raporu</span>
-    <h1>Yönetim Girişi</h1>
-    <form id="loginForm">
-      <div class="field">
-        <label for="loginEmail">E-posta</label>
-        <input type="email" id="loginEmail" autocomplete="username" required />
-      </div>
-      <div class="field">
-        <label for="loginPassword">Şifre</label>
-        <input type="password" id="loginPassword" autocomplete="current-password" required />
-      </div>
-      <p class="login-error" id="loginError"></p>
-      <button type="submit" class="btn btn--primary btn--block" id="loginBtn">Giriş Yap</button>
-    </form>
-  </div>
+  <div class="login-card fade-in">
+    <span class="eyebrow">Meta Raporu</span>
+    <h1>Yönetim Girişi</h1>
+    <form id="loginForm">
+      <div class="field">
+        <label for="loginEmail">E-posta</label>
+        <input type="email" id="loginEmail" autocomplete="username" required />
+      </div>
+      <div class="field">
+        <label for="loginPassword">Şifre</label>
+        <input type="password" id="loginPassword" autocomplete="current-password" required />
+      </div>
+      <p class="login-error" id="loginError"></p>
+      <button type="submit" class="btn btn--primary btn--block" id="loginBtn">Giriş Yap</button>
+    </form>
+  </div>
 </div>
 
 <!-- ============== ADMIN PANELİ ============== -->
 <div id="adminScreen" class="admin-shell" style="display:none;">
 
-  <div class="admin-topbar">
-    <div class="admin-topbar__brandmark"><span class="dot"></span> Meta Raporu · Panel</div>
-    <div class="mode-switch">
-      <button class="mode-switch__btn active" id="modeMonthlyBtn" type="button">Aylık Rapor</button>
-      <button class="mode-switch__btn" id="modeDailyBtn" type="button">Günlük Rapor</button>
-    </div>
-    <button class="btn btn--ghost btn--sm" id="logoutBtn">Çıkış Yap</button>
-  </div>
+  <div class="admin-topbar">
+    <div class="admin-topbar__brandmark"><span class="dot"></span> Meta Raporu · Panel</div>
+    <div class="mode-switch">
+      <button class="mode-switch__btn active" id="modeMonthlyBtn" type="button">Aylık Rapor</button>
+      <button class="mode-switch__btn" id="modeDailyBtn" type="button">Günlük Rapor</button>
+    </div>
+    <button class="btn btn--ghost btn--sm" id="logoutBtn">Çıkış Yap</button>
+  </div>
 
-  <!-- SOL PANEL: marka listesi -->
-  <aside class="panel">
-    <h3>Markalar</h3>
-    <div class="brand-list" id="brandList"></div>
+  <!-- SOL PANEL: marka listesi -->
+  <aside class="panel">
+    <h3>Markalar</h3>
+    <div class="brand-list" id="brandList"></div>
 
-    <form id="addBrandForm" style="display:flex; gap:8px; margin-bottom:4px;">
-      <input type="text" id="newBrandName" placeholder="Yeni marka adı" required
-        style="flex:1; background:#fff; border:1px solid var(--glass-border); color:var(--text); border-radius:var(--radius-sm); padding:9px 11px; font-size:13px; font-family:var(--font-body);" />
-      <button type="submit" class="btn btn--sm btn--primary">Ekle</button>
-    </form>
+    <form id="addBrandForm" style="display:flex; gap:8px; margin-bottom:4px;">
+      <input type="text" id="newBrandName" placeholder="Yeni marka adı" required
+        style="flex:1; background:#fff; border:1px solid var(--glass-border); color:var(--text); border-radius:var(--radius-sm); padding:9px 11px; font-size:13px; font-family:var(--font-body);" />
+      <button type="submit" class="btn btn--sm btn--primary">Ekle</button>
+    </form>
 
-    <div class="share-box" id="shareBox" style="display:none;">
-      <h3 style="margin-bottom:8px;">Aylık Rapor Linki</h3>
-      <div class="share-box__link">
-        <span id="shareLinkText">—</span>
-        <button class="btn btn--sm btn--ghost" id="copyLinkBtn" type="button">Kopyala</button>
-      </div>
-      <h3 style="margin:14px 0 8px;">Günlük Rapor Linki</h3>
-      <div class="share-box__link">
-        <span id="shareDailyLinkText">—</span>
-        <button class="btn btn--sm btn--ghost" id="copyDailyLinkBtn" type="button">Kopyala</button>
-      </div>
-    </div>
-  </aside>
+    <div class="share-box" id="shareBox" style="display:none;">
+      <h3 style="margin-bottom:8px;">Aylık Rapor Linki</h3>
+      <div class="share-box__link">
+        <span id="shareLinkText">—</span>
+        <button class="btn btn--sm btn--ghost" id="copyLinkBtn" type="button">Kopyala</button>
+      </div>
+      <h3 style="margin:14px 0 8px;">Günlük Rapor Linki</h3>
+      <div class="share-box__link">
+        <span id="shareDailyLinkText">—</span>
+        <button class="btn btn--sm btn--ghost" id="copyDailyLinkBtn" type="button">Kopyala</button>
+      </div>
+    </div>
+  </aside>
 
-  <!-- SAĞ İÇERİK -->
-  <main class="admin-main" id="mainContent" style="display:none;">
+  <!-- SAĞ İÇERİK -->
+  <main class="admin-main" id="mainContent" style="display:none;">
 
-  <div id="monthlyView">
-    <!-- Rapor tarihi + metrik formu -->
-    <section class="card fade-in">
-      <div class="card__head">
-        <div style="display:flex; align-items:center; gap:14px;">
-          <div class="brand-logo-upload" id="brandLogoUpload" title="Logo yüklemek için tıkla">
-            <span id="brandLogoPreviewText">LOGO</span>
-            <img id="brandLogoPreviewImg" style="display:none;" alt="" />
-          </div>
-          <h2 id="activeBrandTitle">Rapor Bilgileri</h2>
-        </div>
-        <input type="file" id="brandLogoInput" accept="image/*" style="display:none;" />
-        <div style="display:flex; align-items:center; gap:6px;">
-          <input type="date" id="reportDateStart" style="background:var(--glass); border:1px solid var(--glass-border); color:var(--text); border-radius:var(--radius-sm); padding:9px 10px; font-family:var(--font-mono); font-size:12.5px;" />
-          <span style="color:var(--text-faint); font-size:12px;">—</span>
-          <input type="date" id="reportDateEnd" style="background:var(--glass); border:1px solid var(--glass-border); color:var(--text); border-radius:var(--radius-sm); padding:9px 10px; font-family:var(--font-mono); font-size:12.5px;" />
-        </div>
-      </div>
+  <div id="monthlyView">
+    <!-- Rapor tarihi + metrik formu -->
+    <section class="card fade-in">
+      <div class="card__head">
+        <div style="display:flex; align-items:center; gap:14px;">
+          <div class="brand-logo-upload" id="brandLogoUpload" title="Logo yüklemek için tıkla">
+            <span id="brandLogoPreviewText">LOGO</span>
+            <img id="brandLogoPreviewImg" style="display:none;" alt="" />
+          </div>
+          <h2 id="activeBrandTitle">Rapor Bilgileri</h2>
+        </div>
+        <input type="file" id="brandLogoInput" accept="image/*" style="display:none;" />
+        <div style="display:flex; align-items:center; gap:6px;">
+          <input type="date" id="reportDateStart" style="background:var(--glass); border:1px solid var(--glass-border); color:var(--text); border-radius:var(--radius-sm); padding:9px 10px; font-family:var(--font-mono); font-size:12.5px;" />
+          <span style="color:var(--text-faint); font-size:12px;">—</span>
+          <input type="date" id="reportDateEnd" style="background:var(--glass); border:1px solid var(--glass-border); color:var(--text); border-radius:var(--radius-sm); padding:9px 10px; font-family:var(--font-mono); font-size:12.5px;" />
+        </div>
+      </div>
 
-      <div class="form-grid">
-        <div class="field">
-          <label>Reklam Harcama Tutarı (₺)</label>
-          <input type="text" inputmode="numeric" id="fAdSpend" placeholder="0" />
-        </div>
-        <div class="field">
-          <label>Ciro (₺)</label>
-          <input type="text" inputmode="numeric" id="fRevenue" placeholder="0" />
-        </div>
-        <div class="field">
-          <label>Sepete Ekleme</label>
-          <input type="text" inputmode="numeric" id="fAddToCart" placeholder="0" />
-        </div>
-        <div class="field">
-          <label>Ödeme Adımına Geçme</label>
-          <input type="text" inputmode="numeric" id="fCheckout" placeholder="0" />
-        </div>
-        <div class="field">
-          <label>Toplam Sipariş Adedi</label>
-          <input type="text" inputmode="numeric" id="fOrders" placeholder="0" />
-        </div>
-      </div>
+      <div class="form-grid">
+        <div class="field">
+          <label>Reklam Harcama Tutarı (₺)</label>
+          <input type="number" step="0.01" min="0" id="fAdSpend" placeholder="0" />
+        </div>
+        <div class="field">
+          <label>Ciro (₺)</label>
+          <input type="number" step="0.01" min="0" id="fRevenue" placeholder="0" />
+        </div>
+        <div class="field">
+          <label>Sepete Ekleme</label>
+          <input type="number" step="1" min="0" id="fAddToCart" placeholder="0" />
+        </div>
+        <div class="field">
+          <label>Ödeme Adımına Geçme</label>
+          <input type="number" step="1" min="0" id="fCheckout" placeholder="0" />
+        </div>
+        <div class="field">
+          <label>Toplam Sipariş Adedi</label>
+          <input type="number" step="1" min="0" id="fOrders" placeholder="0" />
+        </div>
+      </div>
 
-      <div class="roas-preview">
-        <span class="label">Otomatik hesaplanan ROAS (Ciro / Reklam Harcaması)</span>
-        <span class="value" id="roasPreview">—</span>
-      </div>
+      <div class="roas-preview">
+        <span class="label">Otomatik hesaplanan ROAS (Ciro / Reklam Harcaması)</span>
+        <span class="value" id="roasPreview">—</span>
+      </div>
 
-      <div style="margin-top:18px; display:flex; gap:10px; justify-content:flex-end;">
-        <span class="eyebrow" id="saveStatus" style="align-self:center; text-transform:none; letter-spacing:0;"></span>
-        <button class="btn btn--primary" id="saveReportBtn">Raporu Kaydet</button>
-      </div>
-    </section>
+      <div style="margin-top:18px; display:flex; gap:10px; justify-content:flex-end;">
+        <span class="eyebrow" id="saveStatus" style="align-self:center; text-transform:none; letter-spacing:0;"></span>
+        <button class="btn btn--primary" id="saveReportBtn">Raporu Kaydet</button>
+      </div>
+    </section>
 
-    <!-- Video / Kanca yönetimi -->
-    <section class="card fade-in">
-      <div class="card__head">
-        <h2>En İyi Kancalar</h2>
-      </div>
-      <div class="admin-hook-list" id="adminHookList">
-        <button class="add-hook-tile" id="addHookTile" type="button">
-          <span class="plus">+</span>
-          Video Ekle
-        </button>
-      </div>
-    </section>
-  </div>
+    <!-- Video / Kanca yönetimi -->
+    <section class="card fade-in">
+      <div class="card__head">
+        <h2>En İyi Kancalar</h2>
+      </div>
+      <div class="admin-hook-list" id="adminHookList">
+        <button class="add-hook-tile" id="addHookTile" type="button">
+          <span class="plus">+</span>
+          Video Ekle
+        </button>
+      </div>
+    </section>
+  </div>
 
-  <div id="dailyView" style="display:none;">
-    <section class="card fade-in">
-      <div class="card__head">
-        <h2>Gün Gün Takip</h2>
-        <button class="btn btn--primary btn--sm" id="addDayBtn" type="button">+ Gün Ekle</button>
-      </div>
-      <div style="overflow-x:auto;">
-        <table class="daily-table" id="dailyTable">
-          <thead>
-            <tr>
-              <th>Tarih</th>
-              <th>Harcanan Tutar (₺)</th>
-              <th>Ciro (₺)</th>
-              <th>ROAS</th>
-              <th></th>
-            </tr>
-          </thead>
-          <tbody id="dailyTableBody"></tbody>
-        </table>
-      </div>
-      <p class="empty-hint" id="dailyEmptyHint" style="display:none;">Henüz gün eklenmedi. "Gün Ekle" ile başla.</p>
-    </section>
+  <div id="dailyView" style="display:none;">
+    <section class="card fade-in">
+      <div class="card__head">
+        <h2>Gün Gün Takip</h2>
+        <button class="btn btn--primary btn--sm" id="addDayBtn" type="button">+ Gün Ekle</button>
+      </div>
+      <div style="overflow-x:auto;">
+        <table class="daily-table" id="dailyTable">
+          <thead>
+            <tr>
+              <th>Tarih</th>
+              <th>Harcanan Tutar (₺)</th>
+              <th>Ciro (₺)</th>
+              <th>ROAS</th>
+              <th></th>
+            </tr>
+          </thead>
+          <tbody id="dailyTableBody"></tbody>
+        </table>
+      </div>
+      <p class="empty-hint" id="dailyEmptyHint" style="display:none;">Henüz gün eklenmedi. "Gün Ekle" ile başla.</p>
+    </section>
 
-    <section class="card fade-in">
-      <div class="card__head">
-        <h2>Kreatif Test Sonuçları</h2>
-        <span class="eyebrow">Görsel veya video, her biri birden fazla reklam setinde test edilebilir</span>
-      </div>
-      <div class="creative-list" id="creativeList"></div>
-      <button class="btn btn--ghost btn--block" id="addCreativeBtn" type="button" style="margin-top:14px;">+ Kreatif Ekle (Görsel / Video)</button>
-      <input type="file" id="creativeFileInput" accept="image/*,video/*" style="display:none;" />
-    </section>
-  </div>
+    <section class="card fade-in">
+      <div class="card__head">
+        <h2>Kreatif Test Sonuçları</h2>
+        <span class="eyebrow">Görsel veya video, her biri birden fazla reklam setinde test edilebilir</span>
+      </div>
+      <div class="creative-list" id="creativeList"></div>
+      <button class="btn btn--ghost btn--block" id="addCreativeBtn" type="button" style="margin-top:14px;">+ Kreatif Ekle (Görsel / Video)</button>
+      <input type="file" id="creativeFileInput" accept="image/*,video/*" style="display:none;" />
+    </section>
+  </div>
 
-  </main>
+  </main>
 
-  <div class="state-screen" id="noBrandState" style="grid-column: 2; display:flex;">
-    <p>Başlamak için soldan bir marka seç ya da yeni marka ekle.</p>
-  </div>
+  <div class="state-screen" id="noBrandState" style="grid-column: 2; display:flex;">
+    <p>Başlamak için soldan bir marka seç ya da yeni marka ekle.</p>
+  </div>
 
-  <input type="file" id="videoFileInput" accept="video/*" style="display:none;" />
+  <input type="file" id="videoFileInput" accept="video/*" style="display:none;" />
 </div>
 
 <!-- ============== VİDEO KESME MODALI ============== -->
 <div class="modal-overlay" id="trimModal" style="display:none;">
-  <div class="modal">
-    <div class="modal__head">
-      <h3>Kancayı Kes</h3>
-      <button class="modal__close" id="closeTrimModal" type="button">&times;</button>
-    </div>
+  <div class="modal">
+    <div class="modal__head">
+      <h3>Kancayı Kes</h3>
+      <button class="modal__close" id="closeTrimModal" type="button">&times;</button>
+    </div>
 
-    <div class="trim-video-wrap">
-      <video id="trimVideoPreview" controls playsinline></video>
-    </div>
+    <div class="trim-video-wrap">
+      <video id="trimVideoPreview" controls playsinline></video>
+    </div>
 
-    <p class="trim-hint">Videoyu oynat, tam istediğin karede durdur, sonra aşağıdaki butonla o anı işaretle.</p>
+    <p class="trim-hint">Videoyu oynat, tam istediğin karede durdur, sonra aşağıdaki butonla o anı işaretle.</p>
 
-    <div class="timeline-track" id="timelineTrack">
-      <div class="timeline-track__range" id="timelineRange"></div>
-      <div class="timeline-track__playhead" id="timelinePlayhead"></div>
-    </div>
-    <div class="timeline-current" id="currentLabel">Şu an: 0.0s</div>
+    <div class="timeline-track" id="timelineTrack">
+      <div class="timeline-track__range" id="timelineRange"></div>
+      <div class="timeline-track__playhead" id="timelinePlayhead"></div>
+    </div>
+    <div class="timeline-current" id="currentLabel">Şu an: 0.0s</div>
 
-    <div class="trim-mark-actions">
-      <button class="btn btn--ghost btn--sm" id="markStartBtn" type="button">⏮ Başlangıcı Buraya Al</button>
-      <button class="btn btn--ghost btn--sm" id="markEndBtn" type="button">⏭ Bitişi Buraya Al</button>
-    </div>
-    <div class="trim-range-labels">
-      <span id="startLabel" class="num">Başlangıç: 0.0s</span>
-      <span id="endLabel" class="num">Bitiş: 4.0s</span>
-    </div>
-    <p class="trim-duration-note" id="trimDurationNote">Klip süresi: 4.0 sn</p>
+    <div class="trim-mark-actions">
+      <button class="btn btn--ghost btn--sm" id="markStartBtn" type="button">⏮ Başlangıcı Buraya Al</button>
+      <button class="btn btn--ghost btn--sm" id="markEndBtn" type="button">⏭ Bitişi Buraya Al</button>
+    </div>
+    <div class="trim-range-labels">
+      <span id="startLabel" class="num">Başlangıç: 0.0s</span>
+      <span id="endLabel" class="num">Bitiş: 4.0s</span>
+    </div>
+    <p class="trim-duration-note" id="trimDurationNote">Klip süresi: 4.0 sn</p>
 
-    <div style="display:flex; gap:10px; margin-bottom:14px;">
-      <button class="btn btn--ghost btn--block btn--sm" id="previewClipBtn" type="button">▶ Segmenti Önizle</button>
-    </div>
+    <div style="display:flex; gap:10px; margin-bottom:14px;">
+      <button class="btn btn--ghost btn--block btn--sm" id="previewClipBtn" type="button">▶ Segmenti Önizle</button>
+    </div>
 
-    <div class="field field--text">
-      <label>Video Başlığı</label>
-      <input type="text" id="hookTitleInput" placeholder="örn. Ürün açılış kancası" />
-    </div>
-    <div class="field">
-      <label>Hook Rate (%)</label>
-      <input type="text" inputmode="numeric" id="hookRateInput" placeholder="örn. 42" />
-    </div>
+    <div class="field field--text">
+      <label>Video Başlığı</label>
+      <input type="text" id="hookTitleInput" placeholder="örn. Ürün açılış kancası" />
+    </div>
+    <div class="field">
+      <label>Hook Rate (%)</label>
+      <input type="number" step="0.1" min="0" max="100" id="hookRateInput" placeholder="örn. 42" />
+    </div>
 
-    <p class="trim-duration-note" id="trimStatusNote" style="min-height:16px;"></p>
+    <p class="trim-duration-note" id="trimStatusNote" style="min-height:16px;"></p>
 
-    <div class="modal-actions">
-      <button class="btn btn--ghost" id="cancelTrimBtn" type="button">Vazgeç</button>
-      <button class="btn btn--primary" id="confirmTrimBtn" type="button">Kes ve Yükle</button>
-    </div>
-    <div class="upload-progress" id="uploadProgressWrap" style="display:none;"><span id="uploadProgressBar"></span></div>
-  </div>
+    <div class="modal-actions">
+      <button class="btn btn--ghost" id="cancelTrimBtn" type="button">Vazgeç</button>
+      <button class="btn btn--primary" id="confirmTrimBtn" type="button">Kes ve Yükle</button>
+    </div>
+    <div class="upload-progress" id="uploadProgressWrap" style="display:none;"><span id="uploadProgressBar"></span></div>
+  </div>
 </div>
 
 <div id="toastRoot"></div>
-
-<!-- Sayıları otomatik binlik ayraca (nokta) çeviren script -->
-<script>
-document.addEventListener('input', function (e) {
-    if (e.target.matches('input[type="text"][inputmode="numeric"], input#fAdSpend, input#fRevenue, input#fAddToCart, input#fCheckout, input#fOrders')) {
-        let el = e.target;
-        let val = el.value.replace(/\D/g, ''); // Sadece rakamları al, virgül veya noktaları temizle
-        if (val !== '') {
-            val = Number(val).toLocaleString('tr-TR'); // 3 basamakta bir nokta ekle
-        }
-        el.value = val;
-    }
-});
-</script>
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script src="assets/js/supabaseClient.js"></script>
