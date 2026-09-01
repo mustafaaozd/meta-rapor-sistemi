@@ -27,9 +27,26 @@ function formatCurrency(n) {
   return new Intl.NumberFormat("tr-TR", { maximumFractionDigits: 0 }).format(n || 0);
 }
 
+function parseFormattedNumber(val) {
+  if (typeof val !== 'string') val = String(val || '');
+  // Noktaları binlik ayracı olarak sil, virgülü noktaya çevirip sayıya dönüştür
+  const cleaned = val.replace(/\./g, '').replace(',', '.');
+  return parseFloat(cleaned) || 0;
+}
+
+function formatInputDisplay(val) {
+  if (val === null || val === undefined || val === '') return '';
+  // Kullanıcı yazarken ondalık kısmı korumak için
+  const parts = String(val).replace(/\./g, '').split(',');
+  const wholeNum = parts[0].replace(/\D/g, '');
+  if (wholeNum === '') return val;
+  const formattedWhole = Number(wholeNum).toLocaleString('tr-TR');
+  return parts.length > 1 ? formattedWhole + ',' + parts[1] : formattedWhole;
+}
+
 function computeRoas(revenue, spend) {
-  const r = parseFloat(revenue) || 0;
-  const s = parseFloat(spend) || 0;
+  const r = parseFormattedNumber(revenue);
+  const s = parseFormattedNumber(spend);
   if (s <= 0) return null;
   return r / s;
 }
@@ -335,11 +352,11 @@ async function loadOrCreateReport() {
     currentReportId = data.id;
     document.getElementById("reportDateStart").value = data.report_date;
     document.getElementById("reportDateEnd").value = data.report_date_end || "";
-    document.getElementById("fAdSpend").value = data.ad_spend;
-    document.getElementById("fRevenue").value = data.revenue;
-    document.getElementById("fAddToCart").value = data.add_to_cart;
-    document.getElementById("fCheckout").value = data.checkout_started;
-    document.getElementById("fOrders").value = data.total_orders;
+    document.getElementById("fAdSpend").value = data.ad_spend ?? "";
+    document.getElementById("fRevenue").value = data.revenue ?? "";
+    document.getElementById("fAddToCart").value = data.add_to_cart ?? "";
+    document.getElementById("fCheckout").value = data.checkout_started ?? "";
+    document.getElementById("fOrders").value = data.total_orders ?? "";
   } else {
     currentReportId = null;
     ["fAdSpend", "fRevenue", "fAddToCart", "fCheckout", "fOrders"].forEach((id) => {
@@ -373,11 +390,11 @@ document.getElementById("saveReportBtn").addEventListener("click", async () => {
     brand_id: currentBrand.id,
     report_date: document.getElementById("reportDateStart").value || todayISO(),
     report_date_end: document.getElementById("reportDateEnd").value || null,
-    ad_spend: parseFloat(document.getElementById("fAdSpend").value) || 0,
-    revenue: parseFloat(document.getElementById("fRevenue").value) || 0,
-    add_to_cart: parseInt(document.getElementById("fAddToCart").value) || 0,
-    checkout_started: parseInt(document.getElementById("fCheckout").value) || 0,
-    total_orders: parseInt(document.getElementById("fOrders").value) || 0,
+    ad_spend: parseFormattedNumber(document.getElementById("fAdSpend").value),
+    revenue: parseFormattedNumber(document.getElementById("fRevenue").value),
+    add_to_cart: parseInt(parseFormattedNumber(document.getElementById("fAddToCart").value)) || 0,
+    checkout_started: parseInt(parseFormattedNumber(document.getElementById("fCheckout").value)) || 0,
+    total_orders: parseInt(parseFormattedNumber(document.getElementById("fOrders").value)) || 0,
   };
 
   let result;
@@ -531,22 +548,35 @@ function renderDailyTable(rows) {
     const roas = row.ad_spend > 0 ? (row.revenue / row.ad_spend).toFixed(2) : "—";
     tr.innerHTML = `
       <td><input type="date" value="${row.entry_date}" data-field="entry_date" /></td>
-      <td><input type="number" step="0.01" value="${row.ad_spend}" data-field="ad_spend" /></td>
-      <td><input type="number" step="0.01" value="${row.revenue}" data-field="revenue" /></td>
+      <td><input type="text" inputmode="decimal" value="${row.ad_spend ?? ''}" data-field="ad_spend" /></td>
+      <td><input type="text" inputmode="decimal" value="${row.revenue ?? ''}" data-field="revenue" /></td>
       <td class="roas-cell">${roas === "—" ? "—" : "x" + roas}</td>
       <td><button class="row-delete" title="Sil">🗑</button></td>`;
 
     const roasCell = tr.querySelector(".roas-cell");
-    tr.querySelectorAll("input").forEach((input) => {
+    tr.querySelectorAll("input[type='text']").forEach((input) => {
+      input.addEventListener("input", (e) => {
+        let cursor = e.target.selectionStart;
+        let oldLen = e.target.value.length;
+        e.target.value = formatInputDisplay(e.target.value);
+        let newLen = e.target.value.length;
+        e.target.setSelectionRange(cursor + (newLen - oldLen), cursor + (newLen - oldLen));
+      });
+
       input.addEventListener("change", async () => {
         const field = input.dataset.field;
-        const value = field === "entry_date" ? input.value : parseFloat(input.value) || 0;
+        const value = parseFormattedNumber(input.value);
         await supabaseClient.from("daily_entries").update({ [field]: value }).eq("id", row.id);
-        const spend = parseFloat(tr.querySelector('[data-field="ad_spend"]').value) || 0;
-        const rev = parseFloat(tr.querySelector('[data-field="revenue"]').value) || 0;
+        const spend = parseFormattedNumber(tr.querySelector('[data-field="ad_spend"]').value);
+        const rev = parseFormattedNumber(tr.querySelector('[data-field="revenue"]').value);
         roasCell.textContent = spend > 0 ? "x" + (rev / spend).toFixed(2) : "—";
       });
     });
+
+    tr.querySelector("input[type='date']").addEventListener("change", async (e) => {
+      await supabaseClient.from("daily_entries").update({ entry_date: e.target.value }).eq("id", row.id);
+    });
+
     tr.querySelector(".row-delete").addEventListener("click", async () => {
       if (!confirm("Bu günü silmek istediğine emin misin?")) return;
       await supabaseClient.from("daily_entries").delete().eq("id", row.id);
@@ -650,21 +680,33 @@ function renderSetRow(tbody, creative, set) {
   tr.innerHTML = `
     <td><span class="set-badge ${set.color}">${escapeHtml(set.label)}</span></td>
     <td><input type="date" value="${set.start_date || ""}" data-field="start_date" /></td>
-    <td><input type="number" step="0.01" value="${set.spend}" data-field="spend" /></td>
-    <td><input type="number" step="0.01" value="${set.sales}" data-field="sales" /></td>
+    <td><input type="text" inputmode="decimal" value="${set.spend ?? ''}" data-field="spend" /></td>
+    <td><input type="text" inputmode="decimal" value="${set.sales ?? ''}" data-field="sales" /></td>
     <td class="set-roas">${roas === "—" ? "—" : "x" + roas}</td>
     <td><button class="row-delete" title="Sil">🗑</button></td>`;
 
   const roasCell = tr.querySelector(".set-roas");
-  tr.querySelectorAll("input").forEach((input) => {
+  tr.querySelectorAll("input[type='text']").forEach((input) => {
+    input.addEventListener("input", (e) => {
+      let cursor = e.target.selectionStart;
+      let oldLen = e.target.value.length;
+      e.target.value = formatInputDisplay(e.target.value);
+      let newLen = e.target.value.length;
+      e.target.setSelectionRange(cursor + (newLen - oldLen), cursor + (newLen - oldLen));
+    });
+
     input.addEventListener("change", async () => {
       const field = input.dataset.field;
-      const value = field === "start_date" ? input.value : parseFloat(input.value) || 0;
+      const value = parseFormattedNumber(input.value);
       await supabaseClient.from("creative_sets").update({ [field]: value }).eq("id", set.id);
-      const spend = parseFloat(tr.querySelector('[data-field="spend"]').value) || 0;
-      const sales = parseFloat(tr.querySelector('[data-field="sales"]').value) || 0;
+      const spend = parseFormattedNumber(tr.querySelector('[data-field="spend"]').value);
+      const sales = parseFormattedNumber(tr.querySelector('[data-field="sales"]').value);
       roasCell.textContent = spend > 0 ? "x" + (sales / spend).toFixed(2) : "—";
     });
+  });
+
+  tr.querySelector("input[type='date']").addEventListener("change", async (e) => {
+    await supabaseClient.from("creative_sets").update({ start_date: e.target.value }).eq("id", set.id);
   });
 
   tr.querySelector(".set-badge").addEventListener("click", async () => {
@@ -760,6 +802,23 @@ document.getElementById("creativeFileInput").addEventListener("change", async (e
 
   showToast("Kreatif eklendi.");
   await loadCreatives();
+});
+
+// Otomatik biçimlendirme tetikleyicisi (Aylık rapor inputları için)
+["fAdSpend", "fRevenue", "fAddToCart", "fCheckout", "fOrders"].forEach((id) => {
+  const el = document.getElementById(id);
+  if (el) {
+    el.type = "text";
+    el.inputMode = "decimal";
+    el.addEventListener("input", (e) => {
+      let cursor = e.target.selectionStart;
+      let oldLen = e.target.value.length;
+      e.target.value = formatInputDisplay(e.target.value);
+      let newLen = e.target.value.length;
+      e.target.setSelectionRange(cursor + (newLen - oldLen), cursor + (newLen - oldLen));
+      updateRoasPreview();
+    });
+  }
 });
 
 // ---------------------------------------------------------------------------
