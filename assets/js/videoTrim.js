@@ -151,7 +151,7 @@ const VideoTrim = (() => {
     return "";
   }
 
-  function trimToBlob() {
+  function trimToBlob(onTickCallback) {
     return new Promise((resolve, reject) => {
       const video = el.video();
 
@@ -162,7 +162,12 @@ const VideoTrim = (() => {
 
       const stream = video.captureStream ? video.captureStream() : video.mozCaptureStream();
       const mimeType = pickMimeType();
-      const recorder = new MediaRecorder(stream, mimeType ? { mimeType } : undefined);
+      // Bit hızını sınırlıyoruz: kayıt daha hızlı işlenir, dosya küçük kalır,
+      // yükleme (upload) süresi de kısalır. Kanca videoları zaten kısa/küçük
+      // olduğu için görsel kalitede fark edilir bir kayıp olmaz.
+      const recorderOptions = { videoBitsPerSecond: 2_000_000 };
+      if (mimeType) recorderOptions.mimeType = mimeType;
+      const recorder = new MediaRecorder(stream, recorderOptions);
       const chunks = [];
 
       recorder.ondataavailable = (e) => {
@@ -185,6 +190,7 @@ const VideoTrim = (() => {
         video.play();
 
         const onTick = () => {
+          if (onTickCallback) onTickCallback(video.currentTime - clipStart, clipEnd - clipStart);
           if (video.currentTime >= clipEnd) {
             video.removeEventListener("timeupdate", onTick);
             recorder.stop();
@@ -216,11 +222,13 @@ const VideoTrim = (() => {
     confirmBtn.disabled = true;
     confirmBtn.textContent = "Kesiliyor…";
     statusNote.classList.remove("warn");
-    statusNote.textContent = "Klip taranıyor, lütfen bekle…";
+    statusNote.textContent = "Klip işleniyor…";
 
     try {
-      const blob = await trimToBlob();
-      statusNote.textContent = "Yükleniyor…";
+      const blob = await trimToBlob((elapsed, total) => {
+        statusNote.textContent = `Klip işleniyor… ${elapsed.toFixed(1)}s / ${total.toFixed(1)}s`;
+      });
+      statusNote.textContent = `Yükleniyor… (${(blob.size / (1024 * 1024)).toFixed(1)} MB)`;
 
       await onCompleteCallback({
         blob,
