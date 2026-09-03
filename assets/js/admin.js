@@ -465,7 +465,10 @@ async function loadVideos() {
   (data || []).forEach((v) => {
     const card = document.createElement("div");
     card.className = "admin-hook-card";
+    card.draggable = true;
+    card.dataset.id = v.id;
     card.innerHTML = `
+      <div class="admin-hook-card__drag" title="Taşımak için sürükle">⠿</div>
       <video src="${v.video_url}" muted playsinline preload="metadata"></video>
       <div class="admin-hook-card__body">
         <div class="admin-hook-card__title">${escapeHtml(v.title || "Başlıksız")}</div>
@@ -475,8 +478,36 @@ async function loadVideos() {
         </div>
       </div>`;
     card.querySelector("button").addEventListener("click", () => deleteVideo(v.id, v.video_url));
+    attachDragReorder(card, list, addTile);
     list.insertBefore(card, addTile);
   });
+}
+
+// Kanca kartlarını sürükle-bırakla yeniden sıralama
+function attachDragReorder(card, list, addTile) {
+  card.addEventListener("dragstart", () => {
+    card.classList.add("dragging");
+  });
+  card.addEventListener("dragend", async () => {
+    card.classList.remove("dragging");
+    await persistHookOrder(list, addTile);
+  });
+  card.addEventListener("dragover", (e) => {
+    e.preventDefault();
+    const dragging = list.querySelector(".dragging");
+    if (!dragging || dragging === card) return;
+    const rect = card.getBoundingClientRect();
+    const before = e.clientX < rect.left + rect.width / 2;
+    list.insertBefore(dragging, before ? card : card.nextSibling);
+  });
+}
+
+async function persistHookOrder(list, addTile) {
+  const cards = [...list.querySelectorAll(".admin-hook-card")];
+  const updates = cards.map((card, index) =>
+    supabaseClient.from("videos").update({ sort_order: index }).eq("id", card.dataset.id)
+  );
+  await Promise.all(updates);
 }
 
 document.getElementById("addHookTile").addEventListener("click", () => {
