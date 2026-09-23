@@ -2,6 +2,7 @@
 <html lang="tr">
 <head>
 <meta charset="UTF-8" />
+<meta name="referrer" content="no-referrer" />
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1" />
 <title>Performans Raporu</title>
 <link rel="icon" href="data:,">
@@ -36,6 +37,8 @@
     </div>
   </header>
 
+  <div class="report-history"><label for="reportSelect">Rapor dönemi</label><select id="reportSelect"></select></div>
+  <div class="section-title fade-in"><h2>Toplam</h2></div>
   <section class="metrics-grid fade-in">
     <div class="metric-card">
       <div class="metric-card__label">Reklam Harcama Tutarı</div>
@@ -63,6 +66,65 @@
     </div>
   </section>
 
+  <div id="metaSection" hidden>
+    <div class="section-title fade-in"><h2>Meta</h2></div>
+  <section class="metrics-grid fade-in">
+    <div class="metric-card">
+      <div class="metric-card__label">Reklam Harcama Tutarı</div>
+      <div class="metric-card__value"><span class="unit">₺</span><span id="metaAdSpend">0</span></div>
+    </div>
+    <div class="metric-card">
+      <div class="metric-card__label">Ciro</div>
+      <div class="metric-card__value"><span class="unit">₺</span><span id="metaRevenue">0</span></div>
+    </div>
+    <div class="metric-card metric-card--hero">
+      <div class="metric-card__label">ROAS</div>
+      <div class="metric-card__value" id="metaRoas">—</div>
+    </div>
+    <div class="metric-card">
+      <div class="metric-card__label"><svg class="mi" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="9" cy="21" r="1"/><circle cx="19" cy="21" r="1"/><path d="M1.5 1.5h3l2.68 13.39a2 2 0 0 0 2 1.61h8.72a2 2 0 0 0 2-1.61L22 6.5H6"/></svg>Sepete Ekleme</div>
+      <div class="metric-card__value"><span id="metaAddToCart">0</span></div>
+    </div>
+    <div class="metric-card">
+      <div class="metric-card__label"><svg class="mi" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="5" width="20" height="14" rx="2.5"/><line x1="2" y1="10" x2="22" y2="10"/></svg>Ödeme Adımına Geçme</div>
+      <div class="metric-card__value"><span id="metaCheckout">0</span></div>
+    </div>
+    <div class="metric-card">
+      <div class="metric-card__label"><svg class="mi" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M21 8l-9-5-9 5 9 5 9-5z"/><path d="M3 8v8l9 5 9-5V8"/></svg>Toplam Sipariş Adedi</div>
+      <div class="metric-card__value"><span id="metaOrders">0</span></div>
+    </div>
+  </section>
+  </div>
+  <div id="googleSection" hidden>
+    <div class="section-title fade-in"><h2>Google</h2></div>
+  <section class="metrics-grid fade-in">
+    <div class="metric-card">
+      <div class="metric-card__label">Reklam Harcama Tutarı</div>
+      <div class="metric-card__value"><span class="unit">₺</span><span id="googleAdSpend">0</span></div>
+    </div>
+    <div class="metric-card">
+      <div class="metric-card__label">Ciro</div>
+      <div class="metric-card__value"><span class="unit">₺</span><span id="googleRevenue">0</span></div>
+    </div>
+    <div class="metric-card metric-card--hero">
+      <div class="metric-card__label">ROAS</div>
+      <div class="metric-card__value" id="googleRoas">—</div>
+    </div>
+    <div class="metric-card">
+      <div class="metric-card__label"><svg class="mi" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="9" cy="21" r="1"/><circle cx="19" cy="21" r="1"/><path d="M1.5 1.5h3l2.68 13.39a2 2 0 0 0 2 1.61h8.72a2 2 0 0 0 2-1.61L22 6.5H6"/></svg>Sepete Ekleme</div>
+      <div class="metric-card__value"><span id="googleAddToCart">0</span></div>
+    </div>
+    <div class="metric-card">
+      <div class="metric-card__label"><svg class="mi" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="5" width="20" height="14" rx="2.5"/><line x1="2" y1="10" x2="22" y2="10"/></svg>Ödeme Adımına Geçme</div>
+      <div class="metric-card__value"><span id="googleCheckout">0</span></div>
+    </div>
+    <div class="metric-card">
+      <div class="metric-card__label"><svg class="mi" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M21 8l-9-5-9 5 9 5 9-5z"/><path d="M3 8v8l9 5 9-5V8"/></svg>Toplam Sipariş Adedi</div>
+      <div class="metric-card__value"><span id="googleOrders">0</span></div>
+    </div>
+  </section>
+  </div>
+
   <div class="section-title fade-in">
     <h2>En İyi Kancalar</h2>
   </div>
@@ -74,7 +136,7 @@
 </div>
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-<script src="../assets/js/supabaseClient.js"></script>
-<script src="../assets/js/report.js"></script>
+<script src="../assets/js/supabaseClient.js?v=2"></script>
+<script src="../assets/js/report.js?v=2"></script>
 </body>
 </html>
