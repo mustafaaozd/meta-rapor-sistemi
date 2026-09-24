@@ -425,3 +425,15 @@ a { color: inherit; }
 .report-history { display:flex; align-items:center; gap:12px; margin-top:20px; flex-wrap:wrap; }
 .report-history label { color:var(--text-muted); font-size:12px; }
 .report-history select { max-width:100%; padding:10px 12px; border:1px solid var(--glass-border); border-radius:var(--radius-sm); background:#fff; color:var(--text); font:inherit; font-size:13px; }
+
+/* Kanal kimliği: mevcut kartlar korunur, yalnızca başlık ve ROAS vurgusu ayrışır. */
+.channel-section { --channel-color:#0866ff; --channel-tint:#edf4ff; }
+.channel-section--google { --channel-color:#18804a; --channel-tint:#eef7f1; }
+.channel-title { border-bottom-color:var(--glass-border); gap:12px; flex-wrap:wrap; }
+.channel-title h2 { display:flex; align-items:center; gap:12px; }
+.channel-logo { display:inline-flex; align-items:center; justify-content:center; width:42px; height:42px; border:1px solid var(--glass-border); border-radius:12px; background:#fff; flex:none; }
+.channel-logo svg { width:26px; height:26px; display:block; }
+.channel-section--meta .channel-logo svg { width:30px; }
+.channel-caption { color:var(--text-muted); font-size:12px; font-weight:500; }
+.channel-section .metric-card--hero { background:var(--channel-tint); border-color:var(--glass-border); }
+.channel-section .metric-card--hero .metric-card__value { color:var(--channel-color); }
