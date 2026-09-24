@@ -420,3 +420,8 @@ a { color: inherit; }
   .metric-card--hero .metric-card__value { font-size: 32px; }
   .shell { padding: 18px 14px 60px; }
 }
+
+[hidden] { display:none !important; }
+.report-history { display:flex; align-items:center; gap:12px; margin-top:20px; flex-wrap:wrap; }
+.report-history label { color:var(--text-muted); font-size:12px; }
+.report-history select { max-width:100%; padding:10px 12px; border:1px solid var(--glass-border); border-radius:var(--radius-sm); background:#fff; color:var(--text); font:inherit; font-size:13px; }

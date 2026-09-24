@@ -5,6 +5,13 @@
 let currentBrand = null;
 let currentReportId = null;
 let brands = [];
+let reportArchive = [];
+let reportDirty = false;
+let googleEnabled = false;
+let reportBusy = false;
+let selectionVersion = 0;
+let loadedPeriod = null;
+const metricFields = { AdSpend: "ad_spend", Revenue: "revenue", AddToCart: "add_to_cart", Checkout: "checkout_started", Orders: "total_orders" };
 
 // ---------------------------------------------------------------------------
 // Yardımcılar
@@ -20,7 +27,8 @@ function showToast(message, isError = false) {
 }
 
 function todayISO() {
-  return new Date().toISOString().slice(0, 10);
+  const d = new Date();
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
 }
 
 function formatCurrency(n) {
@@ -124,6 +132,8 @@ document.getElementById("loginForm").addEventListener("submit", async (e) => {
 });
 
 document.getElementById("logoutBtn").addEventListener("click", async () => {
+  if (reportBusy || !canLeaveReport()) return;
+  reportDirty = false;
   await supabaseClient.auth.signOut();
 });
 
@@ -187,6 +197,7 @@ function escapeHtml(str) {
 
 document.getElementById("addBrandForm").addEventListener("submit", async (e) => {
   e.preventDefault();
+  if (reportBusy || !canLeaveReport()) return;
   const input = document.getElementById("newBrandName");
   const name = input.value.trim();
   if (!name) return;
@@ -203,6 +214,7 @@ document.getElementById("addBrandForm").addEventListener("submit", async (e) => 
   }
 
   input.value = "";
+  reportDirty = false;
   brands.push(data);
   renderBrandList();
   selectBrand(data.id);
@@ -210,6 +222,7 @@ document.getElementById("addBrandForm").addEventListener("submit", async (e) => 
 });
 
 async function deleteBrand(id, name) {
+  if (reportBusy || !canLeaveReport()) return;
   if (!confirm(`"${name}" markasını ve tüm raporlarını silmek istediğine emin misin? Bu işlem geri alınamaz.`)) return;
 
   const { error } = await supabaseClient.from("brands").delete().eq("id", id);
@@ -218,6 +231,7 @@ async function deleteBrand(id, name) {
     return;
   }
 
+  reportDirty = false;
   brands = brands.filter((b) => b.id !== id);
   if (currentBrand && currentBrand.id === id) {
     currentBrand = null;
@@ -236,6 +250,10 @@ async function deleteBrand(id, name) {
 }
 
 async function selectBrand(id) {
+  if (reportBusy || !canLeaveReport()) return;
+  const version = ++selectionVersion;
+  currentReportId = null;
+  loadedPeriod = null;
   currentBrand = brands.find((b) => b.id === id);
   if (!currentBrand) return;
 
@@ -245,51 +263,10 @@ async function selectBrand(id) {
   document.getElementById("activeBrandTitle").textContent = currentBrand.name;
   updateLogoPreview();
 
-  const shareBox = document.getElementById("shareBox");
-  shareBox.style.display = "block";
-  const base = `${window.location.origin}${window.location.pathname.replace(/index\.html$/, "")}`;
-  const link = `${base}rapor/?t=${currentBrand.access_token}`;
-  document.getElementById("shareLinkText").textContent = link;
-  document.getElementById("copyLinkBtn").onclick = () => {
-    navigator.clipboard.writeText(link);
-    showToast("Link kopyalandı.");
-  };
-  const dailyLink = `${base}gunluk/?t=${currentBrand.access_token}`;
-  document.getElementById("shareDailyLinkText").textContent = dailyLink;
-  document.getElementById("copyDailyLinkBtn").onclick = () => {
-    navigator.clipboard.writeText(dailyLink);
-    showToast("Link kopyalandı.");
-  };
-
-  await loadOrCreateReport();
-  if (currentMode === "daily") {
-    await loadDailyEntries();
-    await loadCreatives();
-  }
+  await loadReportArchive(version);
 }
 
 // ---------------------------------------------------------------------------
-// AYLIK / GÜNLÜK GEÇİŞ
-// ---------------------------------------------------------------------------
-
-let currentMode = "monthly";
-
-document.getElementById("modeMonthlyBtn").addEventListener("click", () => switchMode("monthly"));
-document.getElementById("modeDailyBtn").addEventListener("click", () => switchMode("daily"));
-
-async function switchMode(mode) {
-  currentMode = mode;
-  document.getElementById("modeMonthlyBtn").classList.toggle("active", mode === "monthly");
-  document.getElementById("modeDailyBtn").classList.toggle("active", mode === "daily");
-  document.getElementById("monthlyView").style.display = mode === "monthly" ? "block" : "none";
-  document.getElementById("dailyView").style.display = mode === "daily" ? "block" : "none";
-
-  if (mode === "daily" && currentBrand) {
-    await loadDailyEntries();
-    await loadCreatives();
-  }
-}
-
 // ---------------------------------------------------------------------------
 // MARKA LOGOSU
 // ---------------------------------------------------------------------------
@@ -353,93 +330,224 @@ document.getElementById("brandLogoInput").addEventListener("change", async (e) =
 // RAPOR (metrikler)
 // ---------------------------------------------------------------------------
 
-async function loadOrCreateReport() {
-  document.getElementById("reportDateStart").value = todayISO();
-  document.getElementById("reportDateEnd").value = "";
 
-  const { data, error } = await supabaseClient
-    .from("reports")
-    .select("*")
-    .eq("brand_id", currentBrand.id)
-    .order("report_date", { ascending: false })
-    .limit(1)
-    .maybeSingle();
+function canLeaveReport() {
+  return !reportDirty || confirm("Kaydedilmemiş değişiklikler var. Kaydetmeden devam edilsin mi?");
+}
 
-  if (error) {
-    showToast("Rapor yüklenemedi.", true);
-    return;
-  }
+function setDirty() {
+  reportDirty = true;
+  document.getElementById("reportState").textContent = "Kaydedilmemiş değişiklikler";
+}
 
-  if (data) {
-    currentReportId = data.id;
-    document.getElementById("reportDateStart").value = data.report_date;
-    document.getElementById("reportDateEnd").value = data.report_date_end || "";
-    document.getElementById("fAdSpend").value = formatTRNumber(data.ad_spend);
-    document.getElementById("fRevenue").value = formatTRNumber(data.revenue);
-    document.getElementById("fAddToCart").value = data.add_to_cart;
-    document.getElementById("fCheckout").value = data.checkout_started;
-    document.getElementById("fOrders").value = data.total_orders;
-  } else {
+function periodLabel(r) {
+  return r.report_date_end && r.report_date_end !== r.report_date
+    ? `${r.report_date} — ${r.report_date_end}` : r.report_date;
+}
+
+function updateShareLink() {
+  const box = document.getElementById("shareBox");
+  box.style.display = currentReportId ? "block" : "none";
+  if (!currentReportId) return;
+  const base = new URL("./", window.location.href);
+  const url = new URL("rapor/", base);
+  url.searchParams.set("t", currentBrand.access_token);
+  url.searchParams.set("r", currentReportId);
+  document.getElementById("shareLinkText").textContent = url.href;
+  document.getElementById("copyLinkBtn").onclick = async () => {
+    try {
+      await navigator.clipboard.writeText(url.href);
+      showToast("Seçili raporun linki kopyalandı.");
+    } catch (_) { showToast("Link kopyalanamadı.", true); }
+  };
+}
+
+function renderArchive() {
+  const select = document.getElementById("reportSelect");
+  select.replaceChildren();
+  const draft = document.createElement("option");
+  draft.value = "";
+  draft.textContent = "Yeni rapor";
+  select.appendChild(draft);
+  reportArchive.forEach(r => {
+    const option = document.createElement("option");
+    option.value = r.id;
+    option.textContent = periodLabel(r);
+    select.appendChild(option);
+  });
+  select.value = currentReportId || "";
+}
+
+async function loadReportArchive(version = selectionVersion) {
+  const brandId = currentBrand.id;
+  setReportBusy(true);
+  try {
+    const { data, error } = await supabaseClient.from("reports").select("*")
+      .eq("brand_id", brandId).order("report_date", { ascending: false })
+      .order("created_at", { ascending: false }).order("id", { ascending: false });
+    if (version !== selectionVersion) return;
+    if (error) throw error;
+    reportArchive = data || [];
+    renderArchive();
+    await openReport(reportArchive[0] || null);
+  } catch (_) {
     currentReportId = null;
-    ["fAdSpend", "fRevenue", "fAddToCart", "fCheckout", "fOrders"].forEach((id) => {
-      document.getElementById(id).value = "";
-    });
-  }
+    reportArchive = [];
+    renderArchive();
+    updateShareLink();
+    document.getElementById("mainContent").style.display = "none";
+    showToast("Raporlar yüklenemedi. Markayı yeniden seçerek tekrar dene.", true);
+  } finally { setReportBusy(false); }
+}
 
-  updateRoasPreview();
-  await loadVideos();
+function fillMetrics(prefix, data) {
+  Object.entries(metricFields).forEach(([suffix, key]) => {
+    document.getElementById(prefix + suffix).value = data ? formatTRNumber(data[key] ?? 0) : "";
+  });
+  // Adet alanlarında Türkçe binlik ayırıcı kullanılmaz.
+  ["AddToCart", "Checkout", "Orders"].forEach(suffix => {
+    document.getElementById(prefix + suffix).value = data ? (data[metricFields[suffix]] ?? 0) : "";
+  });
+}
+
+function readMetrics(prefix, allowEmpty = false) {
+  const values = Object.entries(metricFields).map(([suffix, key], index) => {
+    const input = document.getElementById(prefix + suffix);
+    const raw = input.value.trim();
+    const value = index < 2 ? parseTRNumber(raw) : Number(raw || 0);
+    if (!Number.isFinite(value) || value < 0 || (index >= 2 && !Number.isInteger(value))) {
+      throw new Error("Metrikler negatif olamaz; adet alanları tam sayı olmalı.");
+    }
+    return [key, value, raw];
+  });
+  if (allowEmpty && values.every(v => !v[2])) return null;
+  return Object.fromEntries(values.map(([key, value]) => [key, value]));
 }
 
 function updateRoasPreview() {
-  const spend = document.getElementById("fAdSpend").value;
-  const revenue = document.getElementById("fRevenue").value;
-  const roas = computeRoas(revenue, spend);
-  document.getElementById("roasPreview").textContent = roas === null ? "—" : `x${roas.toFixed(2)}`;
+  [["f", "roasPreview"], ["meta", "metaRoasPreview"], ["g", "googleRoasPreview"]].forEach(([prefix, id]) => {
+    const roas = computeRoas(document.getElementById(prefix + "Revenue").value, document.getElementById(prefix + "AdSpend").value);
+    document.getElementById(id).textContent = roas === null ? "—" : `x${roas.toFixed(2)}`;
+  });
 }
 
-attachTRNumberInput(document.getElementById("fAdSpend"));
-attachTRNumberInput(document.getElementById("fRevenue"));
+function renderGoogle() {
+  document.getElementById("googleFields").hidden = !googleEnabled;
+  const btn = document.getElementById("toggleGoogleBtn");
+  btn.textContent = googleEnabled ? "Google Verilerini Kaldır" : "+ Google Ekle";
+  btn.setAttribute("aria-expanded", String(googleEnabled));
+}
 
-["fAdSpend", "fRevenue"].forEach((id) => {
-  document.getElementById(id).addEventListener("input", updateRoasPreview);
+async function openReport(report) {
+  ++selectionVersion;
+  currentReportId = report ? report.id : null;
+  loadedPeriod = report ? { start: report.report_date, end: report.report_date_end || null } : null;
+  document.getElementById("reportDateStart").value = report ? report.report_date : todayISO().slice(0, 7) + "-01";
+  document.getElementById("reportDateEnd").value = report ? (report.report_date_end || "") : todayISO();
+  fillMetrics("f", report);
+  fillMetrics("meta", report && report.meta_data);
+  fillMetrics("g", report && report.google_data);
+  googleEnabled = !!(report && report.google_data);
+  renderGoogle();
+  updateRoasPreview();
+  reportDirty = false;
+  document.getElementById("reportState").textContent = report ? "Kayıtlı rapor" : "Yeni rapor";
+  document.getElementById("saveReportBtn").textContent = report ? "Raporu Güncelle" : "Raporu Kaydet";
+  document.getElementById("saveStatus").textContent = "";
+  document.getElementById("reportSelect").value = currentReportId || "";
+  updateShareLink();
+  await loadVideos();
+}
+
+function setReportBusy(busy) {
+  reportBusy = busy;
+  document.getElementById("mainContent").querySelectorAll("input, button, select").forEach(el => { el.disabled = busy; });
+}
+
+document.getElementById("newReportBtn").addEventListener("click", async () => {
+  if (!reportBusy && canLeaveReport()) {
+    setReportBusy(true);
+    try { await openReport(null); } finally { setReportBusy(false); }
+  }
+});
+document.getElementById("reportSelect").addEventListener("change", async e => {
+  const id = e.target.value;
+  if (reportBusy || !canLeaveReport()) { e.target.value = currentReportId || ""; return; }
+  setReportBusy(true);
+  try { await openReport(reportArchive.find(r => r.id === id) || null); } finally { setReportBusy(false); }
+});
+
+["f", "meta", "g"].forEach(prefix => {
+  Object.keys(metricFields).forEach(suffix => {
+    const input = document.getElementById(prefix + suffix);
+    if (suffix === "AdSpend" || suffix === "Revenue") attachTRNumberInput(input);
+    input.addEventListener("input", () => { setDirty(); updateRoasPreview(); });
+  });
+});
+["reportDateStart", "reportDateEnd"].forEach(id => {
+  document.getElementById(id).addEventListener("input", () => {
+    setDirty();
+    const changed = loadedPeriod && (document.getElementById("reportDateStart").value !== loadedPeriod.start ||
+      (document.getElementById("reportDateEnd").value || null) !== loadedPeriod.end);
+    document.getElementById("saveReportBtn").textContent = changed ? "Yeni Dönem Olarak Kaydet" : currentReportId ? "Raporu Güncelle" : "Raporu Kaydet";
+  });
+});
+window.addEventListener("beforeunload", e => {
+  if (reportDirty || reportBusy) { e.preventDefault(); e.returnValue = ""; }
+});
+
+document.getElementById("toggleGoogleBtn").addEventListener("click", async () => {
+  if (reportBusy) return;
+  if (!googleEnabled) { googleEnabled = true; renderGoogle(); setDirty(); return; }
+  // Sadece bu kaydın Google alanını temizle; diğer taslak değişikliklere dokunma.
+  setReportBusy(true);
+  try {
+    const changedPeriod = loadedPeriod && (document.getElementById("reportDateStart").value !== loadedPeriod.start ||
+      (document.getElementById("reportDateEnd").value || null) !== loadedPeriod.end);
+    if (currentReportId && !changedPeriod) {
+      const { data, error } = await supabaseClient.from("reports").update({ google_data: null })
+        .eq("id", currentReportId).eq("brand_id", currentBrand.id).select().single();
+      if (error) throw error;
+      reportArchive = reportArchive.map(r => r.id === data.id ? data : r);
+    }
+    googleEnabled = false;
+    fillMetrics("g", null);
+    renderGoogle();
+    updateRoasPreview();
+    showToast("Google bölümü ve verileri bu rapordan kaldırıldı.");
+  } catch (_) { showToast("Google verileri kaldırılamadı.", true); }
+  finally { setReportBusy(false); }
 });
 
 document.getElementById("saveReportBtn").addEventListener("click", async () => {
-  if (!currentBrand) return;
-  const btn = document.getElementById("saveReportBtn");
+  if (!currentBrand || reportBusy) return;
   const status = document.getElementById("saveStatus");
-  btn.disabled = true;
-  status.textContent = "Kaydediliyor…";
-
-  const payload = {
-    brand_id: currentBrand.id,
-    report_date: document.getElementById("reportDateStart").value || todayISO(),
-    report_date_end: document.getElementById("reportDateEnd").value || null,
-    ad_spend: parseTRNumber(document.getElementById("fAdSpend").value),
-    revenue: parseTRNumber(document.getElementById("fRevenue").value),
-    add_to_cart: parseInt(document.getElementById("fAddToCart").value) || 0,
-    checkout_started: parseInt(document.getElementById("fCheckout").value) || 0,
-    total_orders: parseInt(document.getElementById("fOrders").value) || 0,
-  };
-
-  let result;
-  if (currentReportId) {
-    result = await supabaseClient.from("reports").update(payload).eq("id", currentReportId).select().single();
-  } else {
-    result = await supabaseClient.from("reports").insert(payload).select().single();
-  }
-
-  btn.disabled = false;
-
-  if (result.error) {
-    status.textContent = "";
-    showToast("Kaydedilemedi, tekrar dener misin?", true);
-    return;
-  }
-
-  currentReportId = result.data.id;
-  status.textContent = "Kaydedildi ✓";
-  setTimeout(() => (status.textContent = ""), 2200);
+  try {
+    const start = document.getElementById("reportDateStart").value;
+    const end = document.getElementById("reportDateEnd").value || null;
+    if (!start || (end && end < start)) throw new Error("Geçerli bir tarih aralığı seç.");
+    const newPeriod = loadedPeriod && (start !== loadedPeriod.start || end !== loadedPeriod.end);
+    const saveId = newPeriod ? null : currentReportId;
+    if (reportArchive.some(r => r.id !== saveId && r.report_date === start && (r.report_date_end || null) === end)) {
+      throw new Error("Bu dönem zaten kayıtlı. Kayıtlı Raporlar listesinden açıp düzenleyebilirsin.");
+    }
+    const payload = { brand_id: currentBrand.id, report_date: start, report_date_end: end,
+      ...readMetrics("f"), meta_data: readMetrics("meta", true), google_data: googleEnabled ? readMetrics("g") : null };
+    setReportBusy(true);
+    status.textContent = "Kaydediliyor…";
+    const result = saveId
+      ? await supabaseClient.from("reports").update(payload).eq("id", saveId).eq("brand_id", currentBrand.id).select().single()
+      : await supabaseClient.from("reports").insert(payload).select().single();
+    if (result.error) throw new Error("Kaydedilemedi. Veriler ekranda duruyor; tekrar deneyebilirsin.");
+    reportArchive = reportArchive.filter(r => r.id !== result.data.id);
+    reportArchive.push(result.data);
+    reportArchive.sort((a, b) => b.report_date.localeCompare(a.report_date) || b.created_at.localeCompare(a.created_at) || b.id.localeCompare(a.id));
+    renderArchive();
+    await openReport(result.data);
+    status.textContent = "Kaydedildi ✓";
+    if (newPeriod) showToast("Yeni dönem kaydedildi. Önceki rapor ve videoları arşivde korundu.");
+  } catch (err) { status.textContent = ""; showToast(err.message, true); }
+  finally { setReportBusy(false); }
 });
 
 // ---------------------------------------------------------------------------
@@ -453,14 +561,16 @@ async function loadVideos() {
   [...list.querySelectorAll(".admin-hook-card")].forEach((n) => n.remove());
 
   if (!currentReportId) return;
+  const reportId = currentReportId;
 
   const { data, error } = await supabaseClient
     .from("videos")
     .select("*")
-    .eq("report_id", currentReportId)
+    .eq("report_id", reportId)
     .order("sort_order", { ascending: true });
 
-  if (error) return;
+  if (reportId !== currentReportId) return;
+  if (error) { showToast("Kancalar yüklenemedi.", true); return; }
 
   (data || []).forEach((v) => {
     const card = document.createElement("div");
@@ -474,7 +584,7 @@ async function loadVideos() {
         <div class="admin-hook-card__title">${escapeHtml(v.title || "Başlıksız")}</div>
         <div class="admin-hook-card__meta">
           <span>${v.hook_rate != null ? v.hook_rate + "% hook" : "—"}</span>
-          <button data-id="${v.id}" data-path="${v.storage_path || ""}">Sil</button>
+          <button data-id="${v.id}" >Sil</button>
         </div>
       </div>`;
     card.querySelector("button").addEventListener("click", () => deleteVideo(v.id, v.video_url));
@@ -511,7 +621,7 @@ async function persistHookOrder(list, addTile) {
 }
 
 document.getElementById("addHookTile").addEventListener("click", () => {
-  if (!currentReportId) {
+  if (reportDirty || !currentReportId) {
     showToast("Önce raporu kaydet, sonra video ekleyebilirsin.", true);
     return;
   }
@@ -521,12 +631,14 @@ document.getElementById("addHookTile").addEventListener("click", () => {
 document.getElementById("videoFileInput").addEventListener("change", (e) => {
   const file = e.target.files[0];
   if (!file) return;
-  VideoTrim.open(file, handleTrimComplete);
+  const brandId = currentBrand.id;
+  const reportId = currentReportId;
+  VideoTrim.open(file, args => handleTrimComplete({ ...args, brandId, reportId }));
   e.target.value = "";
 });
 
-async function handleTrimComplete({ blob, title, hookRate, clipStart, clipEnd, originalDuration, onProgress }) {
-  const fileName = `${currentBrand.id}/${currentReportId}/${Date.now()}.webm`;
+async function handleTrimComplete({ blob, title, hookRate, clipStart, clipEnd, originalDuration, onProgress, brandId, reportId }) {
+  const fileName = `${brandId}/${reportId}/${Date.now()}.webm`;
 
   onProgress(20);
 
@@ -543,7 +655,7 @@ async function handleTrimComplete({ blob, title, hookRate, clipStart, clipEnd, o
   const { data: publicUrlData } = supabaseClient.storage.from(VIDEO_BUCKET).getPublicUrl(fileName);
 
   const { error: insertError } = await supabaseClient.from("videos").insert({
-    report_id: currentReportId,
+    report_id: reportId,
     title,
     video_url: publicUrlData.publicUrl,
     hook_rate: hookRate,
@@ -554,6 +666,7 @@ async function handleTrimComplete({ blob, title, hookRate, clipStart, clipEnd, o
   });
 
   if (insertError) {
+    await supabaseClient.storage.from(VIDEO_BUCKET).remove([fileName]);
     throw new Error("Kayıt eklenemedi: " + insertError.message);
   }
 
@@ -565,7 +678,8 @@ async function handleTrimComplete({ blob, title, hookRate, clipStart, clipEnd, o
 async function deleteVideo(id, url) {
   if (!confirm("Bu videoyu silmek istediğine emin misin?")) return;
 
-  await supabaseClient.from("videos").delete().eq("id", id);
+  const { error } = await supabaseClient.from("videos").delete().eq("id", id);
+  if (error) { showToast("Video silinemedi.", true); return; }
 
   try {
     const path = decodeURIComponent(url.split(`/${VIDEO_BUCKET}/`)[1]);
@@ -576,266 +690,4 @@ async function deleteVideo(id, url) {
   await loadVideos();
 }
 
-// ---------------------------------------------------------------------------
-// GÜNLÜK TAKİP (Gün Gün Takip tablosu)
-// ---------------------------------------------------------------------------
-
-async function loadDailyEntries() {
-  if (!currentBrand) return;
-  const { data, error } = await supabaseClient
-    .from("daily_entries")
-    .select("*")
-    .eq("brand_id", currentBrand.id)
-    .order("entry_date", { ascending: false });
-
-  if (error) return;
-  renderDailyTable(data || []);
-}
-
-function renderDailyTable(rows) {
-  const body = document.getElementById("dailyTableBody");
-  const emptyHint = document.getElementById("dailyEmptyHint");
-  body.innerHTML = "";
-
-  emptyHint.style.display = rows.length ? "none" : "block";
-
-  rows.forEach((row) => {
-    const tr = document.createElement("tr");
-    const roas = row.ad_spend > 0 ? (row.revenue / row.ad_spend).toFixed(2) : "—";
-    tr.innerHTML = `
-      <td><input type="date" value="${row.entry_date}" data-field="entry_date" /></td>
-      <td><input type="text" inputmode="decimal" value="${formatTRNumber(row.ad_spend)}" data-field="ad_spend" /></td>
-      <td><input type="text" inputmode="decimal" value="${formatTRNumber(row.revenue)}" data-field="revenue" /></td>
-      <td class="roas-cell">${roas === "—" ? "—" : "x" + roas}</td>
-      <td><button class="row-delete" title="Sil">🗑</button></td>`;
-
-    const roasCell = tr.querySelector(".roas-cell");
-    tr.querySelectorAll('input[type="text"]').forEach(attachTRNumberInput);
-    tr.querySelectorAll("input").forEach((input) => {
-      input.addEventListener("change", async () => {
-        const field = input.dataset.field;
-        const value = field === "entry_date" ? input.value : parseTRNumber(input.value);
-        await supabaseClient.from("daily_entries").update({ [field]: value }).eq("id", row.id);
-        const spend = parseTRNumber(tr.querySelector('[data-field="ad_spend"]').value);
-        const rev = parseTRNumber(tr.querySelector('[data-field="revenue"]').value);
-        roasCell.textContent = spend > 0 ? "x" + (rev / spend).toFixed(2) : "—";
-      });
-    });
-    tr.querySelector(".row-delete").addEventListener("click", async () => {
-      if (!confirm("Bu günü silmek istediğine emin misin?")) return;
-      await supabaseClient.from("daily_entries").delete().eq("id", row.id);
-      await loadDailyEntries();
-    });
-
-    body.appendChild(tr);
-  });
-}
-
-document.getElementById("addDayBtn").addEventListener("click", async () => {
-  if (!currentBrand) return;
-  const { error } = await supabaseClient.from("daily_entries").insert({
-    brand_id: currentBrand.id,
-    entry_date: todayISO(),
-    ad_spend: 0,
-    revenue: 0,
-    sort_order: Date.now(),
-  });
-  if (error) {
-    showToast("Gün eklenemedi.", true);
-    return;
-  }
-  await loadDailyEntries();
-});
-
-// ---------------------------------------------------------------------------
-// KREATİF TEST SONUÇLARI (görsel/video + reklam setleri)
-// ---------------------------------------------------------------------------
-
-const SET_COLORS = ["blue", "red", "green"];
-
-async function loadCreatives() {
-  if (!currentBrand) return;
-  const { data, error } = await supabaseClient
-    .from("creatives")
-    .select("*, creative_sets(*)")
-    .eq("brand_id", currentBrand.id)
-    .order("sort_order", { ascending: true });
-
-  if (error) return;
-  renderCreatives(data || []);
-}
-
-function renderCreatives(creatives) {
-  const list = document.getElementById("creativeList");
-  list.innerHTML = "";
-
-  if (!creatives.length) {
-    list.innerHTML = `<p class="empty-hint">Henüz kreatif eklenmedi.</p>`;
-    return;
-  }
-
-  creatives.forEach((creative) => {
-    const card = document.createElement("div");
-    card.className = "creative-card";
-
-    const mediaTag =
-      creative.media_type === "video"
-        ? `<video src="${creative.media_url}" muted playsinline></video>`
-        : `<img src="${creative.media_url}" alt="" />`;
-
-    card.innerHTML = `
-      <div class="creative-card__top">
-        <div class="creative-card__media">${mediaTag}</div>
-        <div class="creative-card__info">
-          <input type="text" value="${escapeHtml(creative.title || "")}" placeholder="Kreatif adı" data-field="title" />
-          <textarea placeholder="Not (örn. tıklama oranı düşük, sepete ekleme maliyeti yüksek...)" data-field="note">${escapeHtml(creative.note || "")}</textarea>
-        </div>
-        <button class="creative-card__delete" title="Kreatifi sil">🗑</button>
-      </div>
-      <div class="creative-sets">
-        <table>
-          <thead><tr><th>Set</th><th>Tarih</th><th>Harcama (₺)</th><th>Satış</th><th>ROAS</th><th></th></tr></thead>
-          <tbody></tbody>
-        </table>
-        <button class="add-set-btn" type="button">+ Set Ekle</button>
-      </div>`;
-
-    card.querySelector('[data-field="title"]').addEventListener("change", async (e) => {
-      await supabaseClient.from("creatives").update({ title: e.target.value }).eq("id", creative.id);
-    });
-    card.querySelector('[data-field="note"]').addEventListener("change", async (e) => {
-      await supabaseClient.from("creatives").update({ note: e.target.value }).eq("id", creative.id);
-    });
-    card.querySelector(".creative-card__delete").addEventListener("click", () => deleteCreative(creative));
-
-    const tbody = card.querySelector("tbody");
-    const sets = (creative.creative_sets || []).sort((a, b) => a.sort_order - b.sort_order);
-    sets.forEach((set) => renderSetRow(tbody, creative, set));
-
-    card.querySelector(".add-set-btn").addEventListener("click", () => addSet(creative, tbody));
-
-    list.appendChild(card);
-  });
-}
-
-function renderSetRow(tbody, creative, set) {
-  const tr = document.createElement("tr");
-  const roas = set.spend > 0 ? (set.sales / set.spend).toFixed(2) : "—";
-  tr.innerHTML = `
-    <td><span class="set-badge ${set.color}">${escapeHtml(set.label)}</span></td>
-    <td><input type="date" value="${set.start_date || ""}" data-field="start_date" /></td>
-    <td><input type="text" inputmode="decimal" value="${formatTRNumber(set.spend)}" data-field="spend" /></td>
-    <td><input type="text" inputmode="decimal" value="${formatTRNumber(set.sales)}" data-field="sales" /></td>
-    <td class="set-roas">${roas === "—" ? "—" : "x" + roas}</td>
-    <td><button class="row-delete" title="Sil">🗑</button></td>`;
-
-  const roasCell = tr.querySelector(".set-roas");
-  tr.querySelectorAll('input[type="text"]').forEach(attachTRNumberInput);
-  tr.querySelectorAll("input").forEach((input) => {
-    input.addEventListener("change", async () => {
-      const field = input.dataset.field;
-      const value = field === "start_date" ? input.value : parseTRNumber(input.value);
-      await supabaseClient.from("creative_sets").update({ [field]: value }).eq("id", set.id);
-      const spend = parseTRNumber(tr.querySelector('[data-field="spend"]').value);
-      const sales = parseTRNumber(tr.querySelector('[data-field="sales"]').value);
-      roasCell.textContent = spend > 0 ? "x" + (sales / spend).toFixed(2) : "—";
-    });
-  });
-
-  tr.querySelector(".set-badge").addEventListener("click", async () => {
-    const nextColor = SET_COLORS[(SET_COLORS.indexOf(set.color) + 1) % SET_COLORS.length];
-    set.color = nextColor;
-    await supabaseClient.from("creative_sets").update({ color: nextColor }).eq("id", set.id);
-    tr.querySelector(".set-badge").className = `set-badge ${nextColor}`;
-  });
-
-  tr.querySelector(".row-delete").addEventListener("click", async () => {
-    if (!confirm("Bu seti silmek istediğine emin misin?")) return;
-    await supabaseClient.from("creative_sets").delete().eq("id", set.id);
-    tr.remove();
-  });
-
-  tbody.appendChild(tr);
-}
-
-async function addSet(creative, tbody) {
-  const count = tbody.querySelectorAll("tr").length + 1;
-  const { data, error } = await supabaseClient
-    .from("creative_sets")
-    .insert({
-      creative_id: creative.id,
-      label: `Set #${count}`,
-      color: SET_COLORS[(count - 1) % SET_COLORS.length],
-      start_date: todayISO(),
-      spend: 0,
-      sales: 0,
-      sort_order: Date.now(),
-    })
-    .select()
-    .single();
-
-  if (error) {
-    showToast("Set eklenemedi.", true);
-    return;
-  }
-  renderSetRow(tbody, creative, data);
-}
-
-async function deleteCreative(creative) {
-  if (!confirm(`"${creative.title || "Bu kreatif"}" silinsin mi? Tüm setleri de silinir.`)) return;
-
-  await supabaseClient.from("creatives").delete().eq("id", creative.id);
-
-  try {
-    const path = decodeURIComponent(creative.media_url.split(`/${CREATIVE_BUCKET}/`)[1]);
-    if (path) await supabaseClient.storage.from(CREATIVE_BUCKET).remove([path]);
-  } catch (_) {}
-
-  showToast("Kreatif silindi.");
-  await loadCreatives();
-}
-
-document.getElementById("addCreativeBtn").addEventListener("click", () => {
-  if (!currentBrand) return;
-  document.getElementById("creativeFileInput").click();
-});
-
-document.getElementById("creativeFileInput").addEventListener("change", async (e) => {
-  const file = e.target.files[0];
-  e.target.value = "";
-  if (!file || !currentBrand) return;
-
-  const mediaType = file.type.startsWith("video") ? "video" : "image";
-  const ext = file.name.split(".").pop();
-  const path = `${currentBrand.id}/${Date.now()}.${ext}`;
-
-  const { error: uploadError } = await supabaseClient.storage
-    .from(CREATIVE_BUCKET)
-    .upload(path, file, { contentType: file.type, upsert: false });
-
-  if (uploadError) {
-    showToast("Kreatif yüklenemedi.", true);
-    return;
-  }
-
-  const { data: publicUrlData } = supabaseClient.storage.from(CREATIVE_BUCKET).getPublicUrl(path);
-
-  const { error: insertError } = await supabaseClient.from("creatives").insert({
-    brand_id: currentBrand.id,
-    title: file.name.replace(/\.[^.]+$/, ""),
-    media_type: mediaType,
-    media_url: publicUrlData.publicUrl,
-    sort_order: Date.now(),
-  });
-
-  if (insertError) {
-    showToast("Kreatif kaydedilemedi.", true);
-    return;
-  }
-
-  showToast("Kreatif eklendi.");
-  await loadCreatives();
-});
-
-// ---------------------------------------------------------------------------
 initAuth();

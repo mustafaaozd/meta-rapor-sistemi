@@ -12,4 +12,11 @@ const supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_
 // Video depolama bucket adları (schema.sql ile birebir uyumlu olmalı)
 const VIDEO_BUCKET = "hook-videos";
 const LOGO_BUCKET = "brand-logos";
-const CREATIVE_BUCKET = "creatives";
+
+
+function createReportClient(token) {
+  return window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
+    auth: { persistSession: false, autoRefreshToken: false, detectSessionInUrl: false },
+    global: { headers: { "x-report-token": token } },
+  });
+}

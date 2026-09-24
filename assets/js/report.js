@@ -27,53 +27,70 @@ function formatDateRange(startIso, endIso) {
   return `${startFmt} – ${endFmt}`;
 }
 
+
+let client;
+let currentBrand;
+let archive = [];
+let reportRequest = 0;
+
 async function init() {
-  const params = new URLSearchParams(window.location.search);
-  const token = params.get("t");
+  try {
+    const params = new URLSearchParams(window.location.search);
+    const token = params.get("t");
+    if (!token || !/^[a-f0-9]{32}$/i.test(token)) return showError();
+    client = createReportClient(token);
+    const { data: brand, error: brandError } = await client.from("brands")
+      .select("id,name,logo_url").eq("access_token", token).maybeSingle();
+    if (brandError || !brand) return showError();
+    currentBrand = brand;
+    const { data, error } = await client.from("reports").select("*").eq("brand_id", brand.id)
+      .order("report_date", { ascending: false }).order("created_at", { ascending: false }).order("id", { ascending: false });
+    if (error) return showError();
+    archive = data || [];
+    const select = document.getElementById("reportSelect");
+    select.replaceChildren();
+    archive.forEach(report => {
+      const option = document.createElement("option");
+      option.value = report.id;
+      option.textContent = formatDateRange(report.report_date, report.report_date_end);
+      select.appendChild(option);
+    });
+    select.disabled = !archive.length;
+    const requestedId = params.get("r");
+    const report = requestedId ? archive.find(r => r.id === requestedId) : archive[0];
+    if (requestedId && !report) return showError();
+    select.addEventListener("change", () => {
+      const next = archive.find(r => r.id === select.value);
+      const url = new URL(window.location.href);
+      url.searchParams.set("r", next.id);
+      window.history.replaceState(null, "", url);
+      showReport(next);
+    });
+    await showReport(report || null);
+  } catch (_) { showError(); }
+}
 
-  if (!token) {
-    showError();
-    return;
-  }
-
-  const { data: brand, error: brandError } = await supabaseClient
-    .from("brands")
-    .select("*")
-    .eq("access_token", token)
-    .maybeSingle();
-
-  if (brandError || !brand) {
-    showError();
-    return;
-  }
-
-  const { data: report, error: reportError } = await supabaseClient
-    .from("reports")
-    .select("*")
-    .eq("brand_id", brand.id)
-    .order("report_date", { ascending: false })
-    .limit(1)
-    .maybeSingle();
-
-  if (reportError) {
-    showError();
-    return;
-  }
-
-  let videos = [];
-  if (report) {
-    const { data: videoData } = await supabaseClient
-      .from("videos")
-      .select("*")
-      .eq("report_id", report.id)
-      .order("sort_order", { ascending: true });
-    videos = videoData || [];
-  }
-
-  render(brand, report, videos);
+async function showReport(report) {
+  const request = ++reportRequest;
+  document.getElementById("loadingState").style.display = "flex";
+  document.getElementById("errorState").style.display = "none";
+  document.getElementById("reportRoot").style.display = "none";
+  try {
+    let videos = [];
+    if (report) {
+      const { data, error } = await client.from("videos").select("*")
+        .eq("report_id", report.id).order("sort_order", { ascending: true });
+      if (error) throw error;
+      videos = data || [];
+      document.getElementById("reportSelect").value = report.id;
+    }
+    if (request !== reportRequest) return;
+    render(currentBrand, report, videos);
+  } catch (_) { if (request === reportRequest) showError(); }
 }
 
 function showError() {
+  document.getElementById("reportRoot").style.display = "none";
   document.getElementById("loadingState").style.display = "none";
   document.getElementById("errorState").style.display = "flex";
 }
@@ -87,7 +104,10 @@ function render(brand, report, videos) {
 
   const logoEl = document.getElementById("brandLogo");
   if (brand.logo_url) {
-    logoEl.innerHTML = `<img src="${brand.logo_url}" alt="${brand.name} logo" />`;
+    const img = document.createElement("img");
+    img.src = brand.logo_url;
+    img.alt = `${brand.name} logo`;
+    logoEl.replaceChildren(img);
   }
 
   document.getElementById("reportDate").textContent = report ? formatDateRange(report.report_date, report.report_date_end) : "—";
@@ -103,7 +123,20 @@ function render(brand, report, videos) {
   document.getElementById("mCheckout").textContent = report ? report.checkout_started : 0;
   document.getElementById("mOrders").textContent = report ? report.total_orders : 0;
 
+  renderChannel("meta", report && report.meta_data);
+  renderChannel("google", report && report.google_data);
   renderHooks(videos);
+}
+
+function renderChannel(prefix, data) {
+  const section = document.getElementById(prefix + "Section");
+  section.hidden = !data;
+  if (!data) return;
+  const fields = { AdSpend: "ad_spend", Revenue: "revenue", AddToCart: "add_to_cart", Checkout: "checkout_started", Orders: "total_orders" };
+  Object.entries(fields).forEach(([suffix, key]) => {
+    document.getElementById(prefix + suffix).textContent = formatCurrency(data[key]);
+  });
+  document.getElementById(prefix + "Roas").textContent = data.ad_spend > 0 ? `x${(data.revenue / data.ad_spend).toFixed(2)}` : "—";
 }
 
 function renderHooks(videos) {
