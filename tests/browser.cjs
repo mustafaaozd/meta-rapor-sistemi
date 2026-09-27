@@ -28,7 +28,11 @@ function mockSDK() {
             let rows=db[table].filter(r=>filters.every(([k,v])=>r[k]===v));
             if(action==='insert'){const row={id:crypto.randomUUID(),created_at:new Date().toISOString(),...payload};db[table].push(row);rows=[row]}
             if(action==='update')rows.forEach(r=>Object.assign(r,payload));
-            if(action==='delete')db[table]=db[table].filter(r=>!rows.includes(r));
+            if(action==='delete'){
+              if(window.emptyDelete){window.emptyDelete=false;return {data:null,error:null}}
+              db[table]=db[table].filter(r=>!rows.includes(r));
+              if(table==='reports')db.videos=db.videos.filter(v=>!rows.some(r=>r.id===v.report_id));
+            }
             rows.sort((a,b)=>{for(const [k,o] of sorts){const d=String(a[k]).localeCompare(String(b[k]));if(d)return o.ascending?d:-d}return 0});
             return {data:single?(rows[0]||null):structuredClone(rows),error:null};
           }).then(resolve,reject)}
@@ -63,6 +67,7 @@ const server=http.createServer((req,res)=>{
     assert.equal(await page.locator('#reportSelect').inputValue(),'august');
     assert.equal(await page.getByText('Günlük Rapor',{exact:true}).count(),0);
     await page.locator('#newReportBtn').click();
+    assert.equal(await page.locator('#deleteReportBtn').isVisible(),false);
     await page.locator('#reportDateStart').fill('2026-09-01');
     await page.locator('#reportDateEnd').fill('2026-09-30');
     for(const [prefix,spend,revenue] of [['f','2000','9000'],['meta','1500','7000']]){
@@ -87,6 +92,7 @@ const server=http.createServer((req,res)=>{
     assert.equal(await page.locator('#fRevenue').inputValue(),'5.000');
     // Dönem değişmişken Google kaldırmak önceki dönemi temizlememeli.
     await page.locator('#reportDateStart').fill('2026-10-01');await page.locator('#reportDateEnd').fill('2026-10-31');
+    assert.equal(await page.locator('#deleteReportBtn').isDisabled(),true);
     await page.locator('#toggleGoogleBtn').click();
     assert.ok(await page.evaluate(()=>testDB.reports[0].google_data));
     await page.locator('#saveReportBtn').click();await page.getByText('Kaydedildi ✓',{exact:true}).waitFor();
@@ -120,7 +126,47 @@ const server=http.createServer((req,res)=>{
     assert.equal(await page.evaluate(()=>document.documentElement.scrollWidth<=window.innerWidth),true);
     await customer.goto(base+'/rapor/?t='+token+'&r=not-this-brand');await customer.locator('#errorState').waitFor();
     assert.equal(await customer.locator('#reportRoot').isVisible(),false);
+    // Silme onayı iptal edilirse kayıt ve taslak korunur.
+    page.removeAllListeners('dialog');
+    let confirmation='';
+    page.once('dialog',async d=>{confirmation=d.message();await d.dismiss()});
+    await page.locator('#deleteReportBtn').click();
+    assert.ok(confirmation.includes('Örnek Marka') && confirmation.includes('2026-08-01') && confirmation.includes('geri alınamaz'));
+    assert.equal(await page.evaluate(()=>testDB.reports.length),3);
+    page.on('dialog',d=>d.accept());
+    await page.locator('#fRevenue').fill('5100');
+    for(const flag of ['failNext','emptyDelete']){
+      await page.evaluate(flag=>{window[flag]=true},flag);
+      await page.locator('#deleteReportBtn').click();
+      await page.locator('#deleteReportBtn:not([disabled])').waitFor();
+      assert.equal(await page.evaluate(()=>testDB.reports.length),3);
+      assert.equal(await page.locator('#reportSelect').inputValue(),'august');
+      assert.equal(await page.locator('#fRevenue').inputValue(),'5.100');
+    }
+    // Başka markanın raporu ve videoları etkilenmez.
+    await page.evaluate(()=>{
+      testDB.reports.push({id:'other-brand-report',brand_id:'brand-b',report_date:'2026-08-01'});
+      testDB.videos.push({id:'other-video',report_id:'other-brand-report'});
+    });
+    await page.locator('#deleteReportBtn').click();
+    await page.waitForFunction(()=>!testDB.reports.some(r=>r.id==='august'));
+    await page.locator('#saveReportBtn:not([disabled])').waitFor();
+    assert.equal(await page.locator('#reportSelect option[value="august"]').count(),0);
+    assert.equal(await page.evaluate(()=>testDB.videos.some(v=>v.id==='video-a')),false);
+    assert.equal(await page.evaluate(()=>testDB.videos.some(v=>v.id==='other-video')),true);
+    assert.equal(await page.locator('#reportSelect').inputValue(),await page.evaluate(()=>testDB.reports.find(r=>r.report_date==='2026-10-01').id));
+    // Son rapor silinince boş yeni rapor açılır, eski paylaşım linki kalmaz.
+    for(let i=0;i<2;i++){
+      await page.locator('#deleteReportBtn').click();
+      await page.locator('#saveReportBtn:not([disabled])').waitFor();
+    }
+    assert.equal(await page.evaluate(()=>testDB.reports.length),1);
+    assert.equal(await page.locator('#reportSelect').inputValue(),'');
+    assert.equal(await page.locator('#deleteReportBtn').isVisible(),false);
+    assert.equal(await page.locator('#shareBox').isVisible(),false);
+    assert.equal(await page.locator('#fRevenue').inputValue(),'');
     assert.deepEqual(errors,[]);
+    console.log('PASS: rapor silme onayı/iptali, hata ve sıfır satır koruması, dönem taslağı, diğer marka izolasyonu, bağlı kayıtlar ve son rapor');
     console.log('PASS: arşiv, yeni dönem, güncelleme, hata koruması, tek tık Google kaldırma, kanal verileri, sabit link, müşteri arşivi, mobil taşma ve JS hataları');
   } finally { await browser.close();server.close(); }
 })().catch(e=>{console.error(e);server.close();process.exitCode=1});

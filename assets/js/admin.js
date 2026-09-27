@@ -455,6 +455,7 @@ async function openReport(report) {
   document.getElementById("saveReportBtn").textContent = report ? "Raporu Güncelle" : "Raporu Kaydet";
   document.getElementById("saveStatus").textContent = "";
   document.getElementById("reportSelect").value = currentReportId || "";
+  updateDeleteReportButton();
   updateShareLink();
   await loadVideos();
 }
@@ -462,7 +463,43 @@ async function openReport(report) {
 function setReportBusy(busy) {
   reportBusy = busy;
   document.getElementById("mainContent").querySelectorAll("input, button, select").forEach(el => { el.disabled = busy; });
+  updateDeleteReportButton();
 }
+
+function isSavedReportPeriod() {
+  return !!(currentReportId && loadedPeriod &&
+    document.getElementById("reportDateStart").value === loadedPeriod.start &&
+    (document.getElementById("reportDateEnd").value || null) === loadedPeriod.end);
+}
+
+function updateDeleteReportButton() {
+  const btn = document.getElementById("deleteReportBtn");
+  btn.hidden = !currentReportId;
+  btn.disabled = reportBusy || !isSavedReportPeriod();
+  btn.title = isSavedReportPeriod() ? "Seçili kayıtlı raporu kalıcı olarak sil" : "Silmek için kayıtlı raporu listeden yeniden seç";
+}
+
+document.getElementById("deleteReportBtn").addEventListener("click", async () => {
+  if (reportBusy || !currentBrand || !isSavedReportPeriod()) return;
+  const report = reportArchive.find(r => r.id === currentReportId);
+  if (!report) return;
+  const message = `"${currentBrand.name}" — ${periodLabel(report)} raporu ve bu rapora bağlı kanca kayıtları kalıcı olarak silinecek. Diğer raporlar etkilenmez. Bu işlem geri alınamaz.` +
+    (reportDirty ? "\nKaydedilmemiş değişiklikler de kaybolacak." : "") + "\n\nRaporu silmek istediğine emin misin?";
+  if (!confirm(message)) return;
+  const brandId = currentBrand.id;
+  setReportBusy(true);
+  try {
+    const { data, error } = await supabaseClient.from("reports").delete()
+      .eq("id", report.id).eq("brand_id", brandId).select("id").single();
+    if (error || !data || data.id !== report.id) throw new Error("delete failed");
+    reportArchive = reportArchive.filter(r => r.id !== report.id);
+    renderArchive();
+    await openReport(reportArchive[0] || null);
+    showToast("Rapor silindi.");
+  } catch (_) {
+    showToast("Rapor silinemedi. Liste ve form korundu; tekrar deneyebilirsin.", true);
+  } finally { setReportBusy(false); }
+});
 
 document.getElementById("newReportBtn").addEventListener("click", async () => {
   if (!reportBusy && canLeaveReport()) {
@@ -490,6 +527,7 @@ document.getElementById("reportSelect").addEventListener("change", async e => {
     const changed = loadedPeriod && (document.getElementById("reportDateStart").value !== loadedPeriod.start ||
       (document.getElementById("reportDateEnd").value || null) !== loadedPeriod.end);
     document.getElementById("saveReportBtn").textContent = changed ? "Yeni Dönem Olarak Kaydet" : currentReportId ? "Raporu Güncelle" : "Raporu Kaydet";
+    updateDeleteReportButton();
   });
 });
 window.addEventListener("beforeunload", e => {
