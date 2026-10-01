@@ -104,6 +104,28 @@ const server=http.createServer((req,res)=>{
     assert.equal(await page.locator('#googleFields').isVisible(),false);
     assert.ok(await page.evaluate(()=>testDB.reports[0].google_data));
     // Aynı dönem için ikinci kayıt engellenir.
+    // Kancalar rapor bazında gizlenir, videolar ve kaydedilmemiş alanlar korunur.
+    await page.locator('#fRevenue').fill('9700');
+    await page.evaluate(()=>window.failNext=true);
+    await page.locator('#toggleHooksBtn').click();
+    await page.locator('#toggleHooksBtn:not([disabled])').waitFor();
+    assert.equal(await page.locator('#adminHooksContent').isVisible(),true);
+    await page.locator('#toggleHooksBtn').click();
+    await page.locator('#toggleHooksBtn:not([disabled])').waitFor();
+    assert.equal(await page.locator('#adminHooksContent').isVisible(),false);
+    assert.equal(await page.evaluate(()=>testDB.reports.find(r=>r.report_date==='2026-09-01').hooks_visible),false);
+    assert.equal(await page.locator('#fRevenue').inputValue(),'9.700');
+    assert.equal(await page.evaluate(()=>testDB.videos.length),1);
+    await page.locator('#toggleHooksBtn').click();
+    await page.locator('#toggleHooksBtn:not([disabled])').waitFor();
+    assert.equal(await page.locator('#adminHooksContent').isVisible(),true);
+    await page.locator('#toggleHooksBtn').click();
+    await page.locator('#toggleHooksBtn:not([disabled])').waitFor();
+    // Dönem taslağında açmak eski kaydın ayarını değiştirmez.
+    await page.locator('#reportDateStart').fill('2026-11-01');
+    await page.locator('#toggleHooksBtn').click();
+    await page.locator('#toggleHooksBtn:not([disabled])').waitFor();
+    assert.equal(await page.evaluate(()=>testDB.reports.find(r=>r.report_date==='2026-09-01').hooks_visible),false);
     await page.locator('#newReportBtn').click();await page.locator('#reportDateStart').fill('2026-08-01');await page.locator('#reportDateEnd').fill('2026-08-31');
     await page.locator('#saveReportBtn').click();await page.getByText('Bu dönem zaten kayıtlı. Kayıtlı Raporlar listesinden açıp düzenleyebilirsin.',{exact:true}).waitFor();
     assert.equal(await page.evaluate(()=>testDB.reports.length),3);
@@ -115,10 +137,17 @@ const server=http.createServer((req,res)=>{
     await customer.goto(base+'/rapor/?t='+token+'&r=august');await customer.locator('#reportRoot').waitFor();
     assert.equal(await customer.locator('#mRevenue').textContent(),'5.000');
     assert.equal(await customer.locator('#metaSection').isVisible(),true);assert.equal(await customer.locator('#googleSection').isVisible(),true);
+    assert.equal(await customer.locator('#hooksSection').isVisible(),true);
     assert.equal(await customer.evaluate(()=>customerHeaders['x-report-token']),token);
     await customer.screenshot({path:path.join(root,'../report-desktop.png'),fullPage:true,animations:'disabled'});
     await customer.locator('#reportSelect').selectOption(september.id);await customer.locator('#reportRoot').waitFor();
     assert.equal(await customer.locator('#googleSection').isVisible(),false);
+    assert.equal(await customer.locator('#hooksSection').isVisible(),false);
+    assert.equal(await customer.locator('#hooksGrid video').count(),0);
+    await customer.locator('#reportSelect').selectOption('august');await customer.locator('#reportRoot').waitFor();
+    assert.equal(await customer.locator('#hooksSection').isVisible(),true);
+    assert.equal(await customer.locator('#hooksGrid video').count(),1);
+    await customer.locator('#reportSelect').selectOption(september.id);await customer.locator('#reportRoot').waitFor();
     assert.equal(await customer.locator('#metaRevenue').textContent(),'7.000');
     await customer.setViewportSize({width:390,height:844});await customer.screenshot({path:path.join(root,'../report-mobile.png'),fullPage:true,animations:'disabled'});
     assert.equal(await customer.evaluate(()=>document.documentElement.scrollWidth<=window.innerWidth),true);
