@@ -78,10 +78,12 @@ async function showReport(report) {
   try {
     let videos = [];
     if (report) {
+      if (report.hooks_visible !== false) {
       const { data, error } = await client.from("videos").select("*")
         .eq("report_id", report.id).order("sort_order", { ascending: true });
       if (error) throw error;
       videos = data || [];
+      }
       document.getElementById("reportSelect").value = report.id;
     }
     if (request !== reportRequest) return;
@@ -125,7 +127,10 @@ function render(brand, report, videos) {
 
   renderChannel("meta", report && report.meta_data);
   renderChannel("google", report && report.google_data);
-  renderHooks(videos);
+  const showHooks = !report || report.hooks_visible !== false;
+  document.getElementById("hooksSection").hidden = !showHooks;
+  if (showHooks) renderHooks(videos);
+  else document.getElementById("hooksGrid").replaceChildren();
 }
 
 function renderChannel(prefix, data) {
