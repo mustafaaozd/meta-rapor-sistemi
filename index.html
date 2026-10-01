@@ -147,12 +147,15 @@
     <section class="card fade-in">
       <div class="card__head">
         <h2>En İyi Kancalar</h2>
+        <button class="btn btn--ghost btn--sm" id="toggleHooksBtn" type="button" aria-expanded="true" aria-controls="adminHooksContent">Kancaları Gizle</button>
       </div>
+      <div id="adminHooksContent">
       <div class="admin-hook-list" id="adminHookList">
         <button class="add-hook-tile" id="addHookTile" type="button">
           <span class="plus">+</span>
           Video Ekle
         </button>
+      </div>
       </div>
     </section>
   </div>
@@ -225,6 +228,6 @@
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script src="assets/js/supabaseClient.js?v=2"></script>
 <script src="assets/js/videoTrim.js"></script>
-<script src="assets/js/admin.js?v=3"></script>
+<script src="assets/js/admin.js?v=4"></script>
 </body>
 </html>

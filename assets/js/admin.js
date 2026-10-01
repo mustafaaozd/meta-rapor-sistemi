@@ -8,6 +8,7 @@ let brands = [];
 let reportArchive = [];
 let reportDirty = false;
 let googleEnabled = false;
+let hooksEnabled = true;
 let reportBusy = false;
 let selectionVersion = 0;
 let loadedPeriod = null;
@@ -448,6 +449,8 @@ async function openReport(report) {
   fillMetrics("meta", report && report.meta_data);
   fillMetrics("g", report && report.google_data);
   googleEnabled = !!(report && report.google_data);
+  hooksEnabled = !report || report.hooks_visible !== false;
+  renderHooksControl();
   renderGoogle();
   updateRoasPreview();
   reportDirty = false;
@@ -534,6 +537,33 @@ window.addEventListener("beforeunload", e => {
   if (reportDirty || reportBusy) { e.preventDefault(); e.returnValue = ""; }
 });
 
+function renderHooksControl() {
+  document.getElementById("adminHooksContent").hidden = !hooksEnabled;
+  const btn = document.getElementById("toggleHooksBtn");
+  btn.textContent = hooksEnabled ? "Kancaları Gizle" : "Kancaları Göster";
+  btn.setAttribute("aria-expanded", String(hooksEnabled));
+}
+
+document.getElementById("toggleHooksBtn").addEventListener("click", async () => {
+  if (reportBusy || !currentBrand) return;
+  const next = !hooksEnabled;
+  const saved = isSavedReportPeriod();
+  setReportBusy(true);
+  try {
+    if (saved) {
+      const { data, error } = await supabaseClient.from("reports").update({ hooks_visible: next })
+        .eq("id", currentReportId).eq("brand_id", currentBrand.id).select().single();
+      if (error || !data) throw new Error("toggle failed");
+      reportArchive = reportArchive.map(r => r.id === data.id ? data : r);
+    } else { setDirty(); }
+    hooksEnabled = next;
+    renderHooksControl();
+    showToast(saved ? (next ? "Kancalar müşteri raporunda gösteriliyor." : "Kancalar müşteri raporunda gizlendi. Videolar korundu.")
+      : "Kanca görünürlüğünü uygulamak için raporu kaydet.");
+  } catch (_) { showToast("Kanca görünürlüğü değiştirilemedi. Tekrar deneyebilirsin.", true); }
+  finally { setReportBusy(false); }
+});
+
 document.getElementById("toggleGoogleBtn").addEventListener("click", async () => {
   if (reportBusy) return;
   if (!googleEnabled) { googleEnabled = true; renderGoogle(); setDirty(); return; }
@@ -570,7 +600,8 @@ document.getElementById("saveReportBtn").addEventListener("click", async () => {
       throw new Error("Bu dönem zaten kayıtlı. Kayıtlı Raporlar listesinden açıp düzenleyebilirsin.");
     }
     const payload = { brand_id: currentBrand.id, report_date: start, report_date_end: end,
-      ...readMetrics("f"), meta_data: readMetrics("meta", true), google_data: googleEnabled ? readMetrics("g") : null };
+      ...readMetrics("f"), meta_data: readMetrics("meta", true), google_data: googleEnabled ? readMetrics("g") : null,
+      hooks_visible: hooksEnabled };
     setReportBusy(true);
     status.textContent = "Kaydediliyor…";
     const result = saveId
