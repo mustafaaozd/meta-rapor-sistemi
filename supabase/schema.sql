@@ -27,6 +27,9 @@ create table if not exists reports (
   created_at timestamptz not null default now()
 );
 
+-- Mevcut raporların görünümünü koruyan, rapor bazlı kanca aç/kapa ayarı.
+alter table public.reports add column if not exists hooks_visible boolean not null default true;
+
 -- 3) VİDEOLAR / KANCALAR
 create table if not exists videos (
   id uuid primary key default gen_random_uuid(),
