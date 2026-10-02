@@ -126,6 +126,14 @@ function render(brand, report, videos) {
   document.getElementById("mOrders").textContent = report ? report.total_orders : 0;
 
   renderChannel("meta", report && report.meta_data);
+  const profit = report && report.profit_loss;
+  const profitCard = document.getElementById("profitCard");
+  const showProfit = !!(report && report.profit_loss_visible && profit !== null && profit !== undefined && Number.isFinite(Number(profit)));
+  profitCard.hidden = !showProfit;
+  profitCard.dataset.result = showProfit ? (profit > 0 ? "profit" : profit < 0 ? "loss" : "neutral") : "";
+  document.getElementById("profitLabel").textContent = showProfit && profit > 0 ? "Kâr" : showProfit && profit < 0 ? "Zarar" : "Kâr / Zarar";
+  document.getElementById("mProfitLoss").textContent = showProfit
+    ? new Intl.NumberFormat("tr-TR", { style: "currency", currency: "TRY", minimumFractionDigits: 2, maximumFractionDigits: 2, signDisplay: "exceptZero" }).format(Number(profit)) : "";
   renderChannel("google", report && report.google_data);
   const showHooks = !report || report.hooks_visible !== false;
   document.getElementById("hooksSection").hidden = !showHooks;

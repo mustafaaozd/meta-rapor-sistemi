@@ -195,6 +195,72 @@ const server=http.createServer((req,res)=>{
     assert.equal(await page.locator('#shareBox').isVisible(),false);
     assert.equal(await page.locator('#fRevenue').inputValue(),'');
     assert.deepEqual(errors,[]);
+    // Manuel toplam kâr/zarar: imza, kuruş, boş/sıfır ve rapor bazlı görünürlük.
+    const profitAdmin = await context.newPage();
+    profitAdmin.on('pageerror',e=>errors.push(e.message));
+    profitAdmin.on('dialog',d=>d.accept());
+    await profitAdmin.goto(base);await profitAdmin.locator('#saveReportBtn:not([disabled])').waitFor();
+    assert.equal(await profitAdmin.locator('#profitFields').isVisible(),false);
+    await profitAdmin.locator('#toggleProfitBtn').click();
+    await profitAdmin.locator('#toggleProfitBtn:not([disabled])').waitFor();
+    assert.equal(await profitAdmin.locator('#profitFields').isVisible(),true);
+    await profitAdmin.locator('#fProfitLoss').fill('-1.250,50');
+    await profitAdmin.locator('#saveReportBtn').click();await profitAdmin.getByText('Kaydedildi ✓',{exact:true}).waitFor();
+    assert.equal(await profitAdmin.evaluate(()=>testDB.reports[0].profit_loss),-1250.5);
+    async function checkProfit(expected, label, shot) {
+      const data=await profitAdmin.evaluate(()=>testDB);
+      const view=await context.newPage();view.on('pageerror',e=>errors.push(e.message));
+      await view.addInitScript(data=>{window.testDB=data},data);
+      await view.goto(base+'/rapor/?t='+token+'&r=august');await view.locator('#reportRoot').waitFor();
+      assert.equal(await view.locator('#profitCard').isVisible(),expected!==null);
+      if(expected!==null){
+        assert.equal(await view.locator('#mProfitLoss').textContent(),new Intl.NumberFormat('tr-TR',{style:'currency',currency:'TRY',minimumFractionDigits:2,maximumFractionDigits:2,signDisplay:'exceptZero'}).format(expected));
+        assert.equal(await view.locator('#profitLabel').textContent(),label);
+      }
+      assert.equal(await view.locator('#metaSection #profitCard, #googleSection #profitCard').count(),0);
+      if(shot){
+        await view.screenshot({path:path.join(root,'../profit-report-desktop.png'),fullPage:true,animations:'disabled'});
+        await view.setViewportSize({width:390,height:844});
+        await view.screenshot({path:path.join(root,'../profit-report-mobile.png'),fullPage:true,animations:'disabled'});
+        assert.equal(await view.evaluate(()=>document.documentElement.scrollWidth<=innerWidth),true);
+      }
+      await view.close();
+    }
+    await checkProfit(-1250.5,'Zarar',true);
+    await profitAdmin.evaluate(()=>window.failNext=true);
+    await profitAdmin.locator('#toggleProfitBtn').click();await profitAdmin.locator('#toggleProfitBtn:not([disabled])').waitFor();
+    assert.equal(await profitAdmin.locator('#profitFields').isVisible(),true);
+    await profitAdmin.locator('#toggleProfitBtn').click();await profitAdmin.locator('#toggleProfitBtn:not([disabled])').waitFor();
+    assert.equal(await profitAdmin.evaluate(()=>testDB.reports[0].profit_loss),-1250.5);
+    await checkProfit(null);
+    await profitAdmin.locator('#toggleProfitBtn').click();await profitAdmin.locator('#toggleProfitBtn:not([disabled])').waitFor();
+    assert.equal(await profitAdmin.locator('#fProfitLoss').inputValue(),'-1.250,5');
+    for(const [raw,value,label] of [['+2.345,67',2345.67,'Kâr'],['0',0,'Kâr / Zarar'],['',null,'']]){
+      await profitAdmin.locator('#fProfitLoss').fill(raw);
+      await profitAdmin.locator('#saveReportBtn').click();await profitAdmin.getByText('Kaydedildi ✓',{exact:true}).waitFor();
+      assert.equal(await profitAdmin.evaluate(()=>testDB.reports[0].profit_loss),value);
+      await checkProfit(value,label);
+    }
+    await profitAdmin.locator('#fProfitLoss').fill('12abc');await profitAdmin.locator('#saveReportBtn').click();
+    assert.equal(await profitAdmin.evaluate(()=>testDB.reports[0].profit_loss),null);
+    assert.equal(await profitAdmin.locator('#fProfitLoss').inputValue(),'12abc');
+    await profitAdmin.locator('#fProfitLoss').fill('-1250,50');
+    await profitAdmin.evaluate(()=>window.failNext=true);await profitAdmin.locator('#saveReportBtn').click();
+    await profitAdmin.locator('#saveReportBtn:not([disabled])').waitFor();
+    assert.equal(await profitAdmin.locator('#fProfitLoss').inputValue(),'-1250,50');
+    await profitAdmin.locator('#reportDateStart').fill('2026-12-01');await profitAdmin.locator('#reportDateEnd').fill('2026-12-31');
+    await profitAdmin.locator('#toggleProfitBtn').click();await profitAdmin.locator('#toggleProfitBtn:not([disabled])').waitFor();
+    assert.equal(await profitAdmin.evaluate(()=>testDB.reports[0].profit_loss_visible),true);
+    await profitAdmin.locator('#saveReportBtn').click();await profitAdmin.getByText('Kaydedildi ✓',{exact:true}).waitFor();
+    assert.equal(await profitAdmin.evaluate(()=>testDB.reports.length),2);
+    assert.equal(await profitAdmin.evaluate(()=>testDB.reports[1].profit_loss_visible),false);
+    await profitAdmin.locator('#toggleProfitBtn').click();await profitAdmin.locator('#toggleProfitBtn:not([disabled])').waitFor();
+    await profitAdmin.screenshot({path:path.join(root,'../profit-admin-desktop.png'),fullPage:true,animations:'disabled'});
+    await profitAdmin.setViewportSize({width:390,height:844});
+    await profitAdmin.screenshot({path:path.join(root,'../profit-admin-mobile.png'),fullPage:true,animations:'disabled'});
+    assert.equal(await profitAdmin.evaluate(()=>document.documentElement.scrollWidth<=innerWidth),true);
+    assert.deepEqual(errors,[]);
+    console.log('PASS: manuel kâr/zarar, pozitif/negatif/kuruş/sıfır/boş, hata koruması, aç/kapa, dönem izolasyonu, mobil');
     console.log('PASS: rapor silme onayı/iptali, hata ve sıfır satır koruması, dönem taslağı, diğer marka izolasyonu, bağlı kayıtlar ve son rapor');
     console.log('PASS: arşiv, yeni dönem, güncelleme, hata koruması, tek tık Google kaldırma, kanal verileri, sabit link, müşteri arşivi, mobil taşma ve JS hataları');
   } finally { await browser.close();server.close(); }

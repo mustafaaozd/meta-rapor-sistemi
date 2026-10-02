@@ -8,7 +8,7 @@
 <link rel="icon" href="data:,">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="../assets/css/style.css?v=3" />
+<link rel="stylesheet" href="../assets/css/style.css?v=4" />
 </head>
 <body>
 
@@ -65,6 +65,11 @@
       <div class="metric-card__value"><span id="mOrders">0</span></div>
     </div>
   </section>
+
+  <div class="metric-card profit-card fade-in" id="profitCard" hidden>
+    <div class="metric-card__label" id="profitLabel">Kâr / Zarar</div>
+    <div class="metric-card__value" id="mProfitLoss">—</div>
+  </div>
 
   <div id="metaSection" class="channel-section channel-section--meta" hidden>
     <div class="section-title channel-title fade-in">
@@ -145,6 +150,6 @@
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script src="../assets/js/supabaseClient.js?v=2"></script>
-<script src="../assets/js/report.js?v=3"></script>
+<script src="../assets/js/report.js?v=4"></script>
 </body>
 </html>
