@@ -30,6 +30,10 @@ create table if not exists reports (
 -- Mevcut raporların görünümünü koruyan, rapor bazlı kanca aç/kapa ayarı.
 alter table public.reports add column if not exists hooks_visible boolean not null default true;
 
+-- Yalnızca toplam bölümünde, manuel TL tutarı; eski raporlarda varsayılan gizli.
+alter table public.reports add column if not exists profit_loss numeric(14,2);
+alter table public.reports add column if not exists profit_loss_visible boolean not null default false;
+
 -- 3) VİDEOLAR / KANCALAR
 create table if not exists videos (
   id uuid primary key default gen_random_uuid(),
