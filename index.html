@@ -7,7 +7,7 @@
 <link rel="icon" href="data:,">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="assets/css/style.css" />
+<link rel="stylesheet" href="assets/css/style.css?v=4" />
 <link rel="stylesheet" href="assets/css/admin.css" />
 </head>
 <body>
@@ -88,7 +88,7 @@
         </div>
       </div>
 
-      <h3 class="channel-heading">Toplam</h3>
+      <div class="profit-toolbar"><h3 class="channel-heading">Toplam</h3><button class="btn btn--ghost btn--sm" id="toggleProfitBtn" type="button" aria-expanded="false" aria-controls="profitFields">+ Kâr / Zarar Ekle</button></div>
       <div class="form-grid">
         <div class="field">
           <label>Reklam Harcama Tutarı (₺)</label>
@@ -109,6 +109,11 @@
         <div class="field">
           <label>Toplam Sipariş Adedi</label>
           <input type="number" step="1" min="0" id="fOrders" placeholder="0" />
+        </div>
+        <div class="field" id="profitFields" hidden>
+          <label for="fProfitLoss">Kâr / Zarar (₺)</label>
+          <input type="text" id="fProfitLoss" placeholder="örn. -1.250,50" aria-describedby="profitHint" />
+          <small class="profit-hint" id="profitHint">Manuel tutar · Pozitif: kâr, negatif: zarar.</small>
         </div>
       </div>
 
@@ -228,6 +233,6 @@
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script src="assets/js/supabaseClient.js?v=2"></script>
 <script src="assets/js/videoTrim.js"></script>
-<script src="assets/js/admin.js?v=4"></script>
+<script src="assets/js/admin.js?v=5"></script>
 </body>
 </html>
