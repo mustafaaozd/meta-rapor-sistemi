@@ -9,6 +9,7 @@ let reportArchive = [];
 let reportDirty = false;
 let googleEnabled = false;
 let hooksEnabled = true;
+let profitEnabled = false;
 let reportBusy = false;
 let selectionVersion = 0;
 let loadedPeriod = null;
@@ -450,6 +451,9 @@ async function openReport(report) {
   fillMetrics("g", report && report.google_data);
   googleEnabled = !!(report && report.google_data);
   hooksEnabled = !report || report.hooks_visible !== false;
+  profitEnabled = !!(report && report.profit_loss_visible);
+  document.getElementById("fProfitLoss").value = formatTRNumber(report && report.profit_loss);
+  renderProfitControl();
   renderHooksControl();
   renderGoogle();
   updateRoasPreview();
@@ -537,6 +541,45 @@ window.addEventListener("beforeunload", e => {
   if (reportDirty || reportBusy) { e.preventDefault(); e.returnValue = ""; }
 });
 
+function readProfitLoss() {
+  const raw = document.getElementById("fProfitLoss").value.trim();
+  if (!raw) return null;
+  if (!/^[+-]?(?:\d+|\d{1,3}(?:\.\d{3})+)(?:,\d{1,2})?$/.test(raw)) {
+    throw new Error("Kâr / zarar tutarını -1.250,50 veya +1.250,50 biçiminde gir (en fazla 2 ondalık).");
+  }
+  const value = Number(raw.replace(/\./g, "").replace(",", "."));
+  if (!Number.isFinite(value) || Math.abs(value) > 999999999999.99) throw new Error("Kâr / zarar tutarı çok büyük.");
+  return value;
+}
+
+function renderProfitControl() {
+  document.getElementById("profitFields").hidden = !profitEnabled;
+  const btn = document.getElementById("toggleProfitBtn");
+  btn.textContent = profitEnabled ? "Kâr / Zararı Gizle" : "+ Kâr / Zarar Ekle";
+  btn.setAttribute("aria-expanded", String(profitEnabled));
+}
+
+document.getElementById("fProfitLoss").addEventListener("input", setDirty);
+document.getElementById("toggleProfitBtn").addEventListener("click", async () => {
+  if (reportBusy || !currentBrand) return;
+  const next = !profitEnabled;
+  const saved = isSavedReportPeriod();
+  setReportBusy(true);
+  try {
+    if (saved) {
+      const { data, error } = await supabaseClient.from("reports").update({ profit_loss_visible: next })
+        .eq("id", currentReportId).eq("brand_id", currentBrand.id).select().single();
+      if (error || !data) throw new Error("toggle failed");
+      reportArchive = reportArchive.map(r => r.id === data.id ? data : r);
+    } else { setDirty(); }
+    profitEnabled = next;
+    renderProfitControl();
+    showToast(saved ? (next ? "Kâr / zarar açıldı. Tutar değişikliklerini raporu güncelleyerek kaydet." : "Kâr / zarar gizlendi. Tutar korundu.")
+      : "Kâr / zarar ayarını uygulamak için raporu kaydet.");
+  } catch (_) { showToast("Kâr / zarar görünürlüğü değiştirilemedi. Tekrar deneyebilirsin.", true); }
+  finally { setReportBusy(false); }
+});
+
 function renderHooksControl() {
   document.getElementById("adminHooksContent").hidden = !hooksEnabled;
   const btn = document.getElementById("toggleHooksBtn");
@@ -601,7 +644,7 @@ document.getElementById("saveReportBtn").addEventListener("click", async () => {
     }
     const payload = { brand_id: currentBrand.id, report_date: start, report_date_end: end,
       ...readMetrics("f"), meta_data: readMetrics("meta", true), google_data: googleEnabled ? readMetrics("g") : null,
-      hooks_visible: hooksEnabled };
+      hooks_visible: hooksEnabled, profit_loss: readProfitLoss(), profit_loss_visible: profitEnabled };
     setReportBusy(true);
     status.textContent = "Kaydediliyor…";
     const result = saveId
